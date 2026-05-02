@@ -78,7 +78,7 @@ with col2:
                 try:
                     # Konfigurer Gemini
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    model = genai.GenerativeModel('gemini-flash-latest')
                     
                     with st.spinner('Analyserer billedet...'):
                         response = model.generate_content(["Analyser dette billede professionelt og giv konstruktiv feedback på komposition, lys og motiv.", image])
