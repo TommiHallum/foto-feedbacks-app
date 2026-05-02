@@ -6,15 +6,14 @@ from fpdf import FPDF
 import os
 import re
 
-# 1. SIDE KONFIGURATION
+# 1. SIDE KONFIGURATION (Må ikke ændres)
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - ROBUST OG RENT DESIGN
+# 2. CSS (Beholdes præcis som ønsket)
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
     
-    /* Upload-felt styling */
     [data-testid="stFileUploader"] {
         background-color: #f0f2f6 !important;
         border: 2px dashed #4F46E5 !important;
@@ -22,14 +21,12 @@ st.markdown("""
         padding: 20px !important;
     }
     
-    /* Skjul standardtekst for at undgå rod */
     [data-testid="stFileUploader"] label, 
     [data-testid="stFileUploader"] small,
     [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
     }
     
-    /* Tilføj egen overskrift i upload-feltet */
     [data-testid="stFileUploader"] section::before {
         content: "UPLOAD BILLEDE HER";
         display: block;
@@ -46,7 +43,6 @@ st.markdown("""
         text-align: center;
     }
 
-    /* Knap styling */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
@@ -82,36 +78,54 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf = FPDF()
     pdf.add_page()
     
+    # Farve definitioner (Matcher appens UI)
+    blue_bg = (231, 243, 255)  # st.info blå
+    gray_bg = (240, 242, 246)  # Standard Streamlit grå
+    text_color = (0, 0, 0)
+    
     # Titel
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(190, 10, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
+    pdf.set_text_color(79, 70, 229) # Knap-blå
+    pdf.cell(190, 15, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
     pdf.ln(5)
     
-    # Midlertidig lagring af billede til PDF
+    # Billede håndtering
     img.convert("RGB").save("temp_p.jpg", "JPEG")
+    w_px, h_px = img.size
+    img_w_pdf = 85
+    img_h_pdf = (h_px / w_px) * img_w_pdf
+    pdf.image("temp_p.jpg", x=10, y=30, w=img_w_pdf)
     
-    # Billede og EXIF placeret ved siden af hinanden
-    pdf.image("temp_p.jpg", x=10, y=30, w=85)
-    
+    # EXIF Boks
     pdf.set_xy(105, 30)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(90, 8, "Tekniske Data (EXIF):", ln=True)
-    pdf.set_font("Arial", '', 10)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_fill_color(249, 250, 251)
+    pdf.cell(90, 8, " Tekniske Data (EXIF):", ln=True, fill=True, border=1)
+    pdf.set_font("Arial", '', 9)
     if exif:
         for k, v in exif.items():
             pdf.set_x(105)
-            pdf.cell(90, 6, f"{k}: {v}", ln=True)
+            pdf.cell(90, 6, f" {k}: {v}", ln=True, border='LR')
     else:
         pdf.set_x(105)
-        pdf.cell(90, 6, "Ingen EXIF data fundet", ln=True)
+        pdf.cell(90, 6, " Ingen EXIF data fundet", ln=True, border='LR')
+    pdf.set_x(105)
+    pdf.cell(90, 1, "", ln=True, border='B')
 
-    # Indledning under billedet (y=105 sikrer afstand)
-    pdf.set_y(105)
-    pdf.set_font("Arial", 'I', 11)
-    pdf.multi_cell(190, 6, intro.encode('latin-1', 'replace').decode('latin-1'))
-    pdf.ln(5)
+    # Start indledning dynamisk
+    start_y = max(30 + img_h_pdf, pdf.get_y()) + 10
+    pdf.set_y(start_y)
     
-    # Analyse sektioner
+    # Samlet vurdering (Boks layout som st.info)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_fill_color(*blue_bg) 
+    pdf.cell(190, 8, " ### Samlet Vurdering", ln=True, fill=True, border=1)
+    pdf.set_font("Arial", 'I', 10)
+    pdf.multi_cell(190, 6, intro.encode('latin-1', 'replace').decode('latin-1'), border=1)
+    pdf.ln(8)
+    
+    # Sektioner
     sections = [
         ("1. Komposition", s1), 
         ("2. Lys & Teknik", s2), 
@@ -120,29 +134,35 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     ]
     
     for title, content in sections:
-        pdf.set_font("Arial", 'B', 12)
-        pdf.set_fill_color(240, 242, 246)
-        pdf.cell(190, 8, title, ln=True, fill=True)
+        if pdf.get_y() > 240:
+            pdf.add_page()
+            
+        pdf.set_font("Arial", 'B', 11)
+        pdf.set_fill_color(*gray_bg)
+        pdf.cell(190, 8, f" {title}", ln=True, fill=True, border=1)
         pdf.set_font("Arial", '', 10)
-        pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'))
-        pdf.ln(4)
+        pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'), border=1)
+        pdf.ln(5)
+        
+    pdf.set_y(-20)
+    pdf.set_font("Arial", 'I', 8)
+    pdf.set_text_color(128, 128, 128)
+    pdf.cell(190, 10, "FOTO FEEDBACK BY TOMMI HALLUM © 2026", align='C')
         
     if os.path.exists("temp_p.jpg"):
         os.remove("temp_p.jpg")
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. SIDEBAR
+# 4. SIDEBAR (Original tekst bevaret)
 st.title("FOTO FEEDBACK")
 
 with st.sidebar:
     st.title("Indstillinger")
     api_key = st.text_input("Gemini API Nøgle:", type="password")
     st.divider()
-    
     st.markdown('**Mangler du en nøgle?**')
     st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
-    
     st.write("### Om appen")
     st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.")
     st.markdown("""
@@ -152,7 +172,7 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-# 5. LAYOUT - KNAPPER
+# 5. LAYOUT KNAPPER
 col_u, col_a, col_p = st.columns([2, 1, 1])
 with col_u:
     uploaded = st.file_uploader("", type=["jpg", "png"])
@@ -168,10 +188,9 @@ with col_p:
     else:
         st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
-# Container til statusbeskeder lige under knapperne
 status_placeholder = st.container()
 
-# 6. LOGIK OG VISNING
+# 6. LOGIK
 if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
@@ -185,7 +204,7 @@ if uploaded:
 
     if analyze_btn:
         if not api_key:
-            with status_placeholder: st.warning("⚠️ Indtast venligst din API-nøgle i menuen til venstre.")
+            with status_placeholder: st.warning("⚠️ Indtast venligst din API-nøgle.")
         else:
             with status_placeholder:
                 with st.status("AI analyserer billedet...", expanded=True) as status:
@@ -204,8 +223,6 @@ if uploaded:
                         
                         res = model.generate_content([prompt, img])
                         text = res.text
-                        
-                        # Split teksten baseret på overskrifterne
                         parts = re.split(r'(INDLEDNING:|SEKTION1:|SEKTION2:|SEKTION3:|SEKTION4:)', text)
                         
                         def get_content(label):
@@ -224,10 +241,9 @@ if uploaded:
                         status.update(label="Analyse færdig!", state="complete", expanded=False)
                         st.rerun()
                     except Exception as e:
-                        status.update(label="Der opstod en fejl", state="error")
+                        status.update(label="Fejl", state="error")
                         st.error(f"Fejl: {e}")
 
-    # Vis resultater hvis de findes i session_state
     if 'intro' in st.session_state:
         st.divider()
         st.write("### Samlet Vurdering")
@@ -249,9 +265,4 @@ if uploaded:
             st.subheader("Professionelle Tips")
             st.success(st.session_state['s4'])
 
-# Footer
-st.markdown("""
-    <div style="text-align:center; padding:20px; color:#888; font-size:12px; margin-top:50px;">
-        FOTO FEEDBACK BY TOMMI HALLUM © 2026
-    </div>
-""", unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; padding:20px; color:#888; font-size:12px; margin-top:50px;">FOTO FEEDBACK BY TOMMI HALLUM © 2026</div>', unsafe_allow_html=True)
