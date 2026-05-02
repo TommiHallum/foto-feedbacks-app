@@ -6,21 +6,23 @@ from fpdf import FPDF
 import os
 import re
 
-# 1. SIDE KONFIGURATION (Må ikke ændres)
+# 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS (Beholdes præcis som ønsket)
+# 2. CSS - BEST PRACTICE LAYOUT
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
     
+    /* Upload-felt - Synkroniseret med knapperne */
     [data-testid="stFileUploader"] {
-        background-color: #f0f2f6 !important;
-        border: 2px dashed #4F46E5 !important;
-        border-radius: 10px !important;
-        padding: 20px !important;
+        background-color: #ffffff !important;
+        border: 2px solid #4F46E5 !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
     }
     
+    /* Skjul standard-labels for rent design */
     [data-testid="stFileUploader"] label, 
     [data-testid="stFileUploader"] small,
     [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
@@ -28,21 +30,23 @@ st.markdown("""
     }
     
     [data-testid="stFileUploader"] section::before {
-        content: "UPLOAD BILLEDE HER";
+        content: "UPLOAD BILLEDE";
         display: block;
-        color: #000000 !important;
+        color: #4F46E5 !important;
         font-weight: bold;
-        margin-bottom: 5px;
         text-align: center;
+        padding-top: 10px;
     }
     [data-testid="stFileUploader"] section::after {
-        content: "Max 20MB per fil • JPG, PNG";
+        content: "JPG, PNG (Max 20MB)";
         display: block;
-        color: #333333 !important;
-        font-size: 13px;
+        color: #666666 !important;
+        font-size: 12px;
         text-align: center;
+        padding-bottom: 10px;
     }
 
+    /* Knap styling - Ensartethed på tværs af funktioner */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
@@ -51,6 +55,7 @@ st.markdown("""
         height: 3.5em !important;
         width: 100% !important;
         border: none !important;
+        text-transform: uppercase;
     }
     
     div.stButton > button:disabled {
@@ -61,7 +66,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. FUNKTIONER
+# 3. HJÆLPEFUNKTIONER
 def get_exif(image):
     exif = {}
     try:
@@ -78,26 +83,26 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf = FPDF()
     pdf.add_page()
     
-    # Farve definitioner (Matcher appens UI)
-    blue_bg = (231, 243, 255)  # st.info blå
-    gray_bg = (240, 242, 246)  # Standard Streamlit grå
-    text_color = (0, 0, 0)
+    # UI Farver til PDF (RGB)
+    blue_info_bg = (231, 243, 255)
+    gray_section_bg = (240, 242, 246)
+    brand_blue = (79, 70, 229)
     
-    # Titel
+    # Header
     pdf.set_font("Arial", 'B', 16)
-    pdf.set_text_color(79, 70, 229) # Knap-blå
+    pdf.set_text_color(*brand_blue)
     pdf.cell(190, 15, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
     pdf.ln(5)
     
-    # Billede håndtering
-    img.convert("RGB").save("temp_p.jpg", "JPEG")
+    # Billede (Beregner højde dynamisk for at undgå overlap)
+    img.convert("RGB").save("temp_report_img.jpg", "JPEG")
     w_px, h_px = img.size
     img_w_pdf = 85
     img_h_pdf = (h_px / w_px) * img_w_pdf
-    pdf.image("temp_p.jpg", x=10, y=30, w=img_w_pdf)
+    pdf.image("temp_report_img.jpg", x=10, y=35, w=img_w_pdf)
     
-    # EXIF Boks
-    pdf.set_xy(105, 30)
+    # EXIF Boks ved siden af billedet
+    pdf.set_xy(105, 35)
     pdf.set_font("Arial", 'B', 11)
     pdf.set_text_color(0, 0, 0)
     pdf.set_fill_color(249, 250, 251)
@@ -113,19 +118,19 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf.set_x(105)
     pdf.cell(90, 1, "", ln=True, border='B')
 
-    # Start indledning dynamisk
-    start_y = max(30 + img_h_pdf, pdf.get_y()) + 10
-    pdf.set_y(start_y)
+    # Find dynamisk startpunkt under det højeste element (Billede eller EXIF)
+    current_y = max(35 + img_h_pdf, pdf.get_y()) + 10
+    pdf.set_y(current_y)
     
-    # Samlet vurdering (Boks layout som st.info)
+    # 1. Samlet vurdering (Blå boks som i appen)
     pdf.set_font("Arial", 'B', 12)
-    pdf.set_fill_color(*blue_bg) 
-    pdf.cell(190, 8, " ### Samlet Vurdering", ln=True, fill=True, border=1)
+    pdf.set_fill_color(*blue_info_bg) 
+    pdf.cell(190, 8, " Samlet Vurdering", ln=True, fill=True, border=1)
     pdf.set_font("Arial", 'I', 10)
     pdf.multi_cell(190, 6, intro.encode('latin-1', 'replace').decode('latin-1'), border=1)
     pdf.ln(8)
     
-    # Sektioner
+    # 2. Feedback sektioner (Grå bokse)
     sections = [
         ("1. Komposition", s1), 
         ("2. Lys & Teknik", s2), 
@@ -134,26 +139,27 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     ]
     
     for title, content in sections:
-        if pdf.get_y() > 240:
+        if pdf.get_y() > 240: # Automatisk sideskift hvis bunden nås
             pdf.add_page()
             
         pdf.set_font("Arial", 'B', 11)
-        pdf.set_fill_color(*gray_bg)
+        pdf.set_fill_color(*gray_section_bg)
         pdf.cell(190, 8, f" {title}", ln=True, fill=True, border=1)
         pdf.set_font("Arial", '', 10)
         pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'), border=1)
         pdf.ln(5)
         
+    # Footer
     pdf.set_y(-20)
     pdf.set_font("Arial", 'I', 8)
     pdf.set_text_color(128, 128, 128)
     pdf.cell(190, 10, "FOTO FEEDBACK BY TOMMI HALLUM © 2026", align='C')
         
-    if os.path.exists("temp_p.jpg"):
-        os.remove("temp_p.jpg")
+    if os.path.exists("temp_report_img.jpg"):
+        os.remove("temp_report_img.jpg")
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. SIDEBAR (Original tekst bevaret)
+# 4. SIDEBAR
 st.title("FOTO FEEDBACK")
 
 with st.sidebar:
@@ -164,6 +170,7 @@ with st.sidebar:
     st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
     st.write("### Om appen")
+    # DIN ORIGINALE TEKST:
     st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.")
     st.markdown("""
         <div style="font-size: 13px; color: #ccc; margin-top: 10px;">
@@ -172,7 +179,7 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-# 5. LAYOUT KNAPPER
+# 5. HOVEDLAYOUT - KNAPPER
 col_u, col_a, col_p = st.columns([2, 1, 1])
 with col_u:
     uploaded = st.file_uploader("", type=["jpg", "png"])
@@ -180,11 +187,11 @@ with col_a:
     analyze_btn = st.button("🚀 Analyser", use_container_width=True)
 with col_p:
     if 'intro' in st.session_state:
-        pdf_file = create_pdf(st.session_state['img'], st.session_state['exif'], 
+        pdf_data = create_pdf(st.session_state['img'], st.session_state['exif'], 
                               st.session_state['intro'], st.session_state['s1'], 
                               st.session_state['s2'], st.session_state['s3'], 
                               st.session_state['s4'])
-        st.download_button("📥 Hent PDF", data=pdf_file, file_name="feedback.pdf", mime="application/pdf", use_container_width=True)
+        st.download_button("📥 Hent PDF", data=pdf_data, file_name="foto-feedback.pdf", mime="application/pdf", use_container_width=True)
     else:
         st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
@@ -195,6 +202,7 @@ if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
     
+    # Vis billede og EXIF
     c1, c2 = st.columns([2, 1])
     with c1: st.image(img, use_container_width=True)
     with c2: 
@@ -204,7 +212,7 @@ if uploaded:
 
     if analyze_btn:
         if not api_key:
-            with status_placeholder: st.warning("⚠️ Indtast venligst din API-nøgle.")
+            with status_placeholder: st.warning("⚠️ Indtast venligst din API-nøgle i menuen.")
         else:
             with status_placeholder:
                 with st.status("AI analyserer billedet...", expanded=True) as status:
@@ -231,6 +239,7 @@ if uploaded:
                                 return parts[idx+1].strip()
                             except: return ""
 
+                        # Gem i session state så det overlever knap-tryk (f.eks. PDF download)
                         st.session_state['intro'] = get_content('INDLEDNING:')
                         st.session_state['s1'] = get_content('SEKTION1:')
                         st.session_state['s2'] = get_content('SEKTION2:')
@@ -244,6 +253,7 @@ if uploaded:
                         status.update(label="Fejl", state="error")
                         st.error(f"Fejl: {e}")
 
+    # Visning af resultater
     if 'intro' in st.session_state:
         st.divider()
         st.write("### Samlet Vurdering")
@@ -265,4 +275,5 @@ if uploaded:
             st.subheader("Professionelle Tips")
             st.success(st.session_state['s4'])
 
+# Footer
 st.markdown('<div style="text-align:center; padding:20px; color:#888; font-size:12px; margin-top:50px;">FOTO FEEDBACK BY TOMMI HALLUM © 2026</div>', unsafe_allow_html=True)
