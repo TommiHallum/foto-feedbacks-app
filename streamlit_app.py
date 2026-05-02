@@ -1,32 +1,40 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
+from PIL.ExifTags import TAGS
 
 # 1. DESIGN & LAYOUT KONFIGURATION (AI STUDIO STIL)
 st.set_page_config(page_title="Foto Feedback - AI Analyse", layout="wide")
 
-# Custom CSS for at ramme AI Studio looket
+# Custom CSS: Tvinger alt tekst til hvid og styler linket
 st.markdown("""
     <style>
     .stApp {
         background-color: #0e1117;
-        color: #ffffff;
+        color: #ffffff !important;
     }
+    /* Tvinger alle labels og tekst til hvid */
+    label, p, span, div, h1, h2, h3, .stMarkdown {
+        color: #ffffff !important;
+    }
+    /* Sidebar styling */
     [data-testid="stSidebar"] {
         background-color: #161b22;
         border-right: 1px solid #30363d;
     }
-    h1, h2, h3 {
-        color: #ffffff !important;
-        font-family: 'Inter', sans-serif;
+    /* Styling af linket i sidemenuen */
+    .stSidebar a {
+        color: #4daafc !important;
+        text-decoration: underline;
     }
+    /* Footer styling */
     .custom-footer {
         position: fixed;
         left: 0;
         bottom: 0;
         width: 100%;
         background-color: #0e1117;
-        color: #8b949e;
+        color: #8b949e !important;
         text-align: center;
         padding: 15px;
         font-size: 12px;
@@ -37,21 +45,36 @@ st.markdown("""
     .main .block-container {
         padding-bottom: 80px;
     }
+    /* Tabel styling */
+    table {
+        color: white !important;
+        width: 100%;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+# Funktion til at hente EXIF data
+def get_exif_data(image):
+    exif_data = {}
+    info = image._getexif()
+    if info:
+        for tag, value in info.items():
+            decoded = TAGS.get(tag, tag)
+            if decoded in ['Make', 'Model', 'ExposureTime', 'FNumber', 'ISOSpeedRatings', 'FocalLength', 'DateTimeDigitized']:
+                exif_data[decoded] = value
+    return exif_data
 
 # 2. SIDEBAR (API NØGLE & OM APPEN)
 with st.sidebar:
     st.title("Indstillinger")
     api_key = st.text_input("Indsæt din Gemini API-nøgle her:", type="password")
     
+    # Link til Google AI Studio som ønsket
+    st.markdown('Få din nøgle hos <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>', unsafe_allow_html=True)
+    
     st.markdown("---")
     st.subheader("Om appen")
-    st.write("""
-    Denne app analyserer dine fotos og giver professionel feedback. 
-    Designet er opdateret til AI Studio-stilen.
-    """)
-    st.info("Få din nøgle hos Google AI Studio.")
+    st.write("Denne app analyserer dine fotos og giver professionel feedback samt tekniske EXIF-data.")
 
 # 3. HOVEDINDHOLD
 st.title("FOTO FEEDBACK")
@@ -60,12 +83,20 @@ st.subheader("AI ANALYSE")
 col1, col2 = st.columns([1, 1], gap="large")
 
 with col1:
-    st.markdown("### 1. Upload")
+    st.markdown("### 1. Upload & Tekniske Data")
     uploaded_file = st.file_uploader("Vælg et billede...", type=["jpg", "jpeg", "png"])
     
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         st.image(image, use_container_width=True, caption="Dit billede")
+        
+        # EXIF DATA TABEL
+        exif = get_exif_data(image)
+        if exif:
+            st.markdown("#### Tekniske EXIF-data")
+            st.table(exif)
+        else:
+            st.info("Ingen EXIF-data fundet i dette billede.")
 
 with col2:
     st.markdown("### 2. Feedback")
@@ -75,12 +106,11 @@ with col2:
         else:
             if st.button("🚀 Start AI Analyse", use_container_width=True):
                 try:
-                    # Bruger den korrekte model: gemini-flash-latest
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-flash-latest')
                     
-                    with st.spinner('Analyserer...'):
-                        prompt = "Du er en professionel fotograf. Analyser komposition, lys og teknik i dette billede."
+                    with st.spinner('Analyserer billedet...'):
+                        prompt = "Du er en professionel fotograf. Analyser komposition, lys, teknik og motiv i dette billede. Giv konkrete råd til forbedring."
                         response = model.generate_content([prompt, image])
                         
                         st.markdown("---")
