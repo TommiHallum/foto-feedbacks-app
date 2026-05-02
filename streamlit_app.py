@@ -9,12 +9,12 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - BEST PRACTICE LAYOUT & STYLING
+# 2. CSS - KONSISTENT DESIGN (Upload-felt matcher knapper)
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
     
-    /* Upload-felt - Synkroniseret med knapperne */
+    /* Upload-felt styling */
     [data-testid="stFileUploader"] {
         background-color: #ffffff !important;
         border: 2px solid #4F46E5 !important;
@@ -22,6 +22,7 @@ st.markdown("""
         padding: 10px !important;
     }
     
+    /* Skjul standard-tekst i uploader */
     [data-testid="stFileUploader"] label, 
     [data-testid="stFileUploader"] small,
     [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
@@ -82,7 +83,7 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf = FPDF()
     pdf.add_page()
     
-    # Farver (RGB)
+    # Farver
     blue_info_bg = (231, 243, 255)
     gray_section_bg = (240, 242, 246)
     brand_blue = (79, 70, 229)
@@ -93,7 +94,7 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf.cell(190, 15, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
     pdf.ln(5)
     
-    # Billede
+    # Billede håndtering
     img.convert("RGB").save("temp_report_img.jpg", "JPEG")
     w_px, h_px = img.size
     img_w_pdf = 85
@@ -117,7 +118,6 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf.set_x(105)
     pdf.cell(90, 1, "", ln=True, border='B')
 
-    # Beregn position under billede/EXIF
     current_y = max(35 + img_h_pdf, pdf.get_y()) + 10
     pdf.set_y(current_y)
     
@@ -143,20 +143,21 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
             
         pdf.set_font("Arial", 'B', 11)
         pdf.set_fill_color(*gray_section_bg)
-        # Bruger ✨ symbol i PDF overskrifter (erstatter *)
         pdf.cell(190, 8, f" {title}", ln=True, fill=True, border=1)
         pdf.set_font("Arial", '', 10)
         pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'), border=1)
         pdf.ln(5)
         
-    # Grafisk Footer i PDF
+    # FOOTER I PDF (Byttet om på rækkefølgen)
     pdf.set_y(-30)
-    pdf.set_font("Arial", '', 9)
-    pdf.set_text_color(100, 100, 100)
-    pdf.cell(190, 5, "hallum.dk - dinfotomand.dk - fotoliv.dk", ln=True, align='C')
     pdf.set_font("Arial", 'B', 12)
     pdf.set_text_color(*brand_blue)
     pdf.cell(190, 7, "✨", ln=True, align='C')
+    
+    pdf.set_font("Arial", '', 9)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(190, 5, "hallum.dk - dinfotomand.dk - fotoliv.dk", ln=True, align='C')
+    
     pdf.set_font("Arial", '', 8)
     pdf.set_text_color(150, 150, 150)
     pdf.cell(190, 5, "AI DREVET FOTO ANALYSE © 2026", ln=True, align='C')
@@ -184,7 +185,7 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-# 5. HOVEDLAYOUT - KNAPPER
+# 5. HOVEDLAYOUT
 col_u, col_a, col_p = st.columns([2, 1, 1])
 with col_u:
     uploaded = st.file_uploader("", type=["jpg", "png"])
@@ -256,33 +257,24 @@ if uploaded:
                         status.update(label="Fejl", state="error")
                         st.error(f"Fejl: {e}")
 
-    # Visning af resultater
     if 'intro' in st.session_state:
         st.divider()
         st.write("### ✨ Samlet Vurdering")
         st.info(st.session_state['intro'])
         
         r1, r2 = st.columns(2)
-        with r1: 
-            st.subheader("✨ 1. Komposition")
-            st.write(st.session_state['s1'])
-        with r2: 
-            st.subheader("✨ 2. Lys & Teknik")
-            st.write(st.session_state['s2'])
+        with r1: st.subheader("✨ 1. Komposition"); st.write(st.session_state['s1'])
+        with r2: st.subheader("✨ 2. Lys & Teknik"); st.write(st.session_state['s2'])
         
         r3, r4 = st.columns(2)
-        with r3: 
-            st.subheader("✨ 3. Historie & Stemning")
-            st.write(st.session_state['s3'])
-        with r4: 
-            st.subheader("✨ Professionelle Tips")
-            st.success(st.session_state['s4'])
+        with r3: st.subheader("✨ 3. Historie & Stemning"); st.write(st.session_state['s3'])
+        with r4: st.subheader("✨ Professionelle Tips"); st.success(st.session_state['s4'])
 
-# 7. GRAFISK FOOTER
+# 7. GRAFISK FOOTER (Byttet om på rækkefølgen som ønsket)
 st.markdown("""
     <div style="text-align:center; padding:40px 20px; color:#888; font-size:13px; margin-top:50px; border-top:1px solid #333;">
+        <div style="font-size:24px; color:#4F46E5; margin-bottom:10px;">✨</div>
         <div style="margin-bottom:10px; letter-spacing:1px;">hallum.dk • dinfotomand.dk • fotoliv.dk</div>
-        <div style="font-size:24px; color:#4F46E5; margin:10px 0;">✨</div>
         <div style="font-weight:bold; color:#555;">AI DREVET FOTO ANALYSE © 2026</div>
     </div>
 """, unsafe_allow_html=True)
