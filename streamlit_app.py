@@ -9,37 +9,56 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - OPTIMERET TIL KOMPAKT LAYOUT OG FEEDBACK
+# 2. CSS - KOMPLETTE RETTELSER (SIDEBAR, FLUGTNING OG KOMPAKTHED)
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
-    [data-testid="stSidebar"] { padding-top: 0.5rem !important; }
     
-    /* Upload og Knapper */
+    /* SIDEBAR: Reducer luft og margener i venstre side */
+    [data-testid="stSidebar"] { padding-top: 0.5rem !important; }
+    [data-testid="stSidebar"] h1 { font-size: 1.4rem !important; margin-bottom: 0.5rem !important; }
+    [data-testid="stSidebar"] h4 { margin: 0.2rem 0 0.1rem 0 !important; padding: 0 !important; }
+    [data-testid="stSidebar"] .stInfo { padding: 0.5rem !important; margin: 0.2rem 0 !important; }
+    [data-testid="stSidebar"] .stMarkdown p { margin-bottom: 0.1rem !important; line-height: 1.2 !important; }
+    [data-testid="stSidebar"] hr { margin: 5px 0 !important; }
+
+    /* HOVEDLAYOUT: Tvinger upload og knapper til at flugte i bunden */
+    [data-testid="column"] {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+    }
+
+    /* Upload-felt styling */
     [data-testid="stFileUploader"] {
         background-color: #ffffff !important;
         border: 2px solid #4F46E5 !important;
         border-radius: 8px !important;
         padding: 5px !important;
+        margin-bottom: 0px !important;
     }
     [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] small, [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p { display: none !important; }
     [data-testid="stFileUploader"] section::before { content: "UPLOAD BILLEDE"; display: block; color: #4F46E5 !important; font-weight: bold; text-align: center; padding-top: 5px; }
     [data-testid="stFileUploader"] section::after { content: "JPG, PNG (Max 20MB)"; display: block; color: #666666 !important; font-size: 10px; text-align: center; padding-bottom: 5px; }
 
+    /* Knap styling - Præcis højde-match til upload felt */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
         border-radius: 8px !important;
         font-weight: bold !important;
-        height: 3.8em !important;
+        height: 3.85em !important;
         width: 100% !important;
         border: none !important;
         text-transform: uppercase;
+        margin-bottom: 0px !important;
     }
+    
+    .stElementContainer { margin-bottom: 0px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. HJÆLPEFUNKTIONER (PDF CLASS MED FOOTER)
+# 3. HJÆLPEFUNKTIONER (PDF & EXIF)
 class PDF(FPDF):
     def footer(self):
         self.set_y(-25)
@@ -81,7 +100,7 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     blue_info_bg, gray_section_bg, brand_blue = (231, 243, 255), (240, 242, 246), (79, 70, 229)
     pdf.set_font("Arial", 'B', 16); pdf.set_text_color(*brand_blue); pdf.cell(190, 15, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
     img.convert("RGB").save("temp_report_img.jpg", "JPEG")
-    pdf.image("temp_report_img.jpg", x=10, y=35, w=70)
+    pdf.image("temp_report_img.jpg", x=10, y=35, w=70) # Mindre billede for printvenlighed
     pdf.set_xy(90, 35); pdf.set_font("Arial", 'B', 11); pdf.set_text_color(0, 0, 0); pdf.set_fill_color(249, 250, 251)
     pdf.cell(110, 8, " Tekniske Data (EXIF):", ln=True, fill=True, border=1)
     pdf.set_font("Arial", '', 9)
@@ -94,17 +113,25 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf.set_font("Arial", 'I', 10); pdf.multi_cell(190, 6, intro.encode('latin-1', 'replace').decode('latin-1'), border=1)
     for title, content in [("1. Komposition", s1), ("2. Lys & Teknik", s2), ("3. Historie & Stemning", s3), ("Professionelle Tips", s4)]:
         if pdf.get_y() > 220: pdf.add_page()
-        pdf.ln(5)
-        pdf.set_font("Arial", 'B', 11); pdf.set_fill_color(*gray_section_bg); pdf.cell(190, 8, f" {title}", ln=True, fill=True, border=1)
+        pdf.ln(5); pdf.set_font("Arial", 'B', 11); pdf.set_fill_color(*gray_section_bg); pdf.cell(190, 8, f" {title}", ln=True, fill=True, border=1)
         pdf.set_font("Arial", '', 10); pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'), border=1)
     if os.path.exists("temp_report_img.jpg"): os.remove("temp_report_img.jpg")
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. SIDEBAR
+# 4. SIDEBAR (RETET MED MINIMAL AFSTAND)
 st.title("FOTO FEEDBACK")
 with st.sidebar:
+    st.markdown("#### Indstillinger")
     api_key = st.text_input("Gemini API Nøgle:", type="password")
-    st.info("Professionel fotoanalyse drevet af AI. Udarbejdet af Tommi Hallum © 2026")
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("**Mangler du en nøgle?**")
+    st.markdown("[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)")
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("#### Om appen")
+    st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.\n\nUdarbejdet af Tommi Hallum © 2026")
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("**Gemini er AI og kan begå fejl**")
+    st.markdown("[Dit privatliv og Gemini](https://support.google.com/gemini/answer/13594961)")
 
 # 5. HOVEDLAYOUT
 col_u, col_a, col_p = st.columns([1.5, 1, 1])
@@ -116,10 +143,10 @@ with col_p:
         st.download_button("📥 Hent PDF", data=pdf_data, file_name="foto-feedback.pdf", mime="application/pdf", use_container_width=True)
     else: st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
-# 6. FEEDBACK CONTAINER (Flyttet ud, så den altid er synlig)
+# Status-felt lige under knapperne
 status_placeholder = st.container()
 
-# 7. LOGIK
+# 6. LOGIK & VISNING
 if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
@@ -138,7 +165,8 @@ if uploaded:
                 with st.status("AI analyserer billedet...", expanded=True) as status:
                     try:
                         genai.configure(api_key=api_key)
-                        res = genai.GenerativeModel('gemini-flash-latest').generate_content(["Analyser dette billede som en professionel fotograf. Brug overskrifter: INDLEDNING:, SEKTION1:, SEKTION2:, SEKTION3:, SEKTION4:. Giv dybdegående feedback på dansk.", img])
+                        model = genai.GenerativeModel('gemini-flash-latest')
+                        res = model.generate_content(["Analyser dette billede som en professionel fotograf. Start med en generel indledning. Brug overskrifter: INDLEDNING:, SEKTION1:, SEKTION2:, SEKTION3:, SEKTION4:. Giv dybdegående feedback på dansk.", img])
                         parts = re.split(r'(INDLEDNING:|SEKTION1:|SEKTION2:|SEKTION3:|SEKTION4:)', res.text)
                         st.session_state.update({
                             'intro': parts[parts.index('INDLEDNING:')+1].strip() if 'INDLEDNING:' in parts else "", 
@@ -164,3 +192,13 @@ if uploaded:
         r3, r4 = st.columns(2)
         with r3: st.subheader("✨ 3. Historie & Stemning"); st.write(st.session_state['s3'])
         with r4: st.subheader("✨ Professionelle Tips"); st.success(st.session_state['s4'])
+
+st.markdown("""
+    <div style="text-align:center; padding:40px 20px; color:#888; font-size:13px; margin-top:50px; border-top:1px solid #333;">
+        <div style="font-weight:bold; color:#555; margin-bottom:5px;">AI DREVET FOTO ANALYSE © 2026</div>
+        <div style="font-size:22px; color:#4F46E5; margin-bottom:15px; display: flex; justify-content: center; gap: 40px;">
+            <span>✨</span><span>✨</span><span>✨</span>
+        </div>
+        <div style="letter-spacing:1px; margin-top: 10px;">hallum.dk • dinfotomand.dk • fotoliv.dk</div>
+    </div>
+""", unsafe_allow_html=True)
