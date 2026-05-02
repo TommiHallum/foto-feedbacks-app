@@ -9,15 +9,17 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - OPTIMERET TIL KOMPAKT LAYOUT
+# 2. CSS - MAKSIMAL KOMPAKTHED OG PERFORMANCE
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
     
     /* Sidebar kompakte afstande */
-    [data-testid="stSidebar"] { padding-top: 1rem; }
-    [data-testid="stSidebarContent"] div { margin-bottom: 0.2rem !important; }
-    .stInfo { padding: 0.5rem !important; margin-bottom: 0.5rem !important; }
+    [data-testid="stSidebar"] { padding-top: 0.5rem !important; }
+    [data-testid="stSidebar"] h1 { font-size: 1.4rem !important; margin-bottom: 0.5rem !important; }
+    [data-testid="stSidebar"] h4 { margin: 0.2rem 0 !important; }
+    [data-testid="stSidebar"] .stInfo { padding: 0.5rem !important; margin: 0.2rem 0 !important; }
+    [data-testid="stSidebar"] .stMarkdown { margin-bottom: 0.1rem !important; }
     
     /* Upload-felt styling */
     [data-testid="stFileUploader"] {
@@ -44,7 +46,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. HJÆLPEFUNKTIONER (PDF-logik bevaret)
+# 3. HJÆLPEFUNKTIONER
 def get_exif(image):
     exif = {}
     try:
@@ -64,22 +66,17 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     
     pdf.set_font("Arial", 'B', 16); pdf.set_text_color(*brand_blue); pdf.cell(190, 15, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
     img.convert("RGB").save("temp_report_img.jpg", "JPEG")
-    w_px, h_px = img.size
-    img_w_pdf = 85
-    pdf.image("temp_report_img.jpg", x=10, y=35, w=img_w_pdf)
+    pdf.image("temp_report_img.jpg", x=10, y=35, w=85)
     
-    pdf.set_xy(105, 35)
-    pdf.set_font("Arial", 'B', 11); pdf.set_text_color(0, 0, 0); pdf.set_fill_color(249, 250, 251)
+    pdf.set_xy(105, 35); pdf.set_font("Arial", 'B', 11); pdf.set_text_color(0, 0, 0); pdf.set_fill_color(249, 250, 251)
     pdf.cell(90, 8, " Tekniske Data (EXIF):", ln=True, fill=True, border=1)
     pdf.set_font("Arial", '', 9)
     if exif:
-        for k, v in exif.items():
-            pdf.set_x(105); pdf.cell(90, 6, f" {k}: {v}", ln=True, border='LR')
-    else:
-        pdf.set_x(105); pdf.cell(90, 6, " Ingen EXIF data fundet", ln=True, border='LR')
+        for k, v in exif.items(): pdf.set_x(105); pdf.cell(90, 6, f" {k}: {v}", ln=True, border='LR')
+    else: pdf.set_x(105); pdf.cell(90, 6, " Ingen EXIF data fundet", ln=True, border='LR')
     pdf.set_x(105); pdf.cell(90, 1, "", ln=True, border='B')
 
-    pdf.set_y(max(35 + (h_px / w_px) * 85, pdf.get_y()) + 10)
+    pdf.set_y(max(35 + (img.size[1] / img.size[0]) * 85, pdf.get_y()) + 10)
     pdf.set_font("Arial", 'B', 12); pdf.set_fill_color(*blue_info_bg); pdf.cell(190, 8, " Samlet Vurdering", ln=True, fill=True, border=1)
     pdf.set_font("Arial", 'I', 10); pdf.multi_cell(190, 6, intro.encode('latin-1', 'replace').decode('latin-1'), border=1)
     
@@ -88,8 +85,7 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
         pdf.set_font("Arial", 'B', 11); pdf.set_fill_color(*gray_section_bg); pdf.cell(190, 8, f" {title}", ln=True, fill=True, border=1)
         pdf.set_font("Arial", '', 10); pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'), border=1)
         
-    pdf.set_y(-30)
-    pdf.set_font("Arial", '', 8); pdf.set_text_color(150, 150, 150); pdf.cell(190, 5, "AI DREVET FOTO ANALYSE © 2026", ln=True, align='C')
+    pdf.set_y(-30); pdf.set_font("Arial", '', 8); pdf.set_text_color(150, 150, 150); pdf.cell(190, 5, "AI DREVET FOTO ANALYSE © 2026", ln=True, align='C')
     pdf.set_font("Arial", 'B', 12); pdf.set_text_color(*brand_blue); pdf.cell(190, 7, "  * * * ", ln=True, align='C')
     pdf.set_font("Arial", '', 9); pdf.set_text_color(100, 100, 100); pdf.cell(190, 5, "hallum.dk - dinfotomand.dk - fotoliv.dk", ln=True, align='C')
     if os.path.exists("temp_report_img.jpg"): os.remove("temp_report_img.jpg")
@@ -98,20 +94,20 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
 # 4. SIDEBAR
 st.title("FOTO FEEDBACK")
 with st.sidebar:
-    st.write("### Indstillinger")
+    st.markdown("#### Indstillinger")
     api_key = st.text_input("Gemini API Nøgle:", type="password")
-    st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
     st.markdown('**Mangler du en nøgle?**')
-    st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
-    st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
+    st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)')
+    st.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
     
-    st.write("### Om appen")
+    st.markdown("#### Om appen")
     st.info("""Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.
     \n\nUdarbejdet og udviklet af Tommi Hallum © 2026""")
     
-    st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
     st.markdown('**Gemini er AI og kan begå fejl**')
-    st.markdown('[Dit privatliv, data og Gemini](https://support.google.com/gemini/answer/13594961)', unsafe_allow_html=True)
+    st.markdown('[Dit privatliv, data og Gemini](https://support.google.com/gemini/answer/13594961)')
 
 # 5. HOVEDLAYOUT
 col_u, col_a, col_p = st.columns([2, 1, 1])
@@ -144,13 +140,17 @@ if uploaded:
                 with st.status("AI analyserer billedet...", expanded=True) as status:
                     try:
                         genai.configure(api_key=api_key)
-                        model = genai.GenerativeModel('gemini-flash-latest')
-                        res = model.generate_content(["Analyser dette billede som en professionel fotograf. Start med en generel indledning. Brug overskrifter: INDLEDNING:, SEKTION1:, SEKTION2:, SEKTION3:, SEKTION4:. Giv dybdegående feedback på dansk.", img])
+                        res = genai.GenerativeModel('gemini-flash-latest').generate_content(["Analyser dette billede som en professionel fotograf. Start med en generel indledning. Brug overskrifter: INDLEDNING:, SEKTION1:, SEKTION2:, SEKTION3:, SEKTION4:. Giv dybdegående feedback på dansk.", img])
                         parts = re.split(r'(INDLEDNING:|SEKTION1:|SEKTION2:|SEKTION3:|SEKTION4:)', res.text)
-                        def get_content(label):
-                            try: return parts[parts.index(label)+1].strip()
-                            except: return ""
-                        st.session_state.update({'intro': get_content('INDLEDNING:'), 's1': get_content('SEKTION1:'), 's2': get_content('SEKTION2:'), 's3': get_content('SEKTION3:'), 's4': get_content('SEKTION4:'), 'img': img, 'exif': exif_data})
+                        st.session_state.update({
+                            'intro': parts[parts.index('INDLEDNING:')+1].strip() if 'INDLEDNING:' in parts else "", 
+                            's1': parts[parts.index('SEKTION1:')+1].strip() if 'SEKTION1:' in parts else "", 
+                            's2': parts[parts.index('SEKTION2:')+1].strip() if 'SEKTION2:' in parts else "", 
+                            's3': parts[parts.index('SEKTION3:')+1].strip() if 'SEKTION3:' in parts else "", 
+                            's4': parts[parts.index('SEKTION4:')+1].strip() if 'SEKTION4:' in parts else "", 
+                            'img': img, 
+                            'exif': exif_data
+                        })
                         status.update(label="Analyse færdig!", state="complete", expanded=False)
                         st.rerun()
                     except Exception as e:
