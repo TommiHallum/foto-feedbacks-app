@@ -9,30 +9,27 @@ import os
 # 1. DESIGN & LAYOUT KONFIGURATION
 st.set_page_config(page_title="Foto Feedback - AI Analyse", layout="wide")
 
-# EKSTRA KRAFTIG CSS for at løse læsbarhedsproblemet
+# CSS: Sikrer mørkt tema, læsbart upload-felt og 20MB tekst
 st.markdown("""
     <style>
-    /* Grundlæggende mørkt tema */
     .stApp { background-color: #0e1117; color: #ffffff; }
+    h1, h2, h3, h4, p, span { color: #ffffff !important; }
     
-    /* TVINGER tekst i upload-feltet til at være mørk, da boksen er lys */
+    /* Upload felt styling - Tvinger mørk tekst på lys baggrund */
     [data-testid="stFileUploader"] {
         background-color: #e0e4e9 !important;
         padding: 10px !important;
         border-radius: 10px !important;
         border: 2px dashed #4F46E5 !important;
     }
-    
-    /* Målretter specifikt teksten "Drag and drop file here", "Browse files" og filstørrelse */
     [data-testid="stFileUploader"] label, 
     [data-testid="stFileUploader"] section, 
     [data-testid="stFileUploader"] p, 
-    [data-testid="stFileUploader"] span,
-    [data-testid="stText"] {
+    [data-testid="stFileUploader"] span {
         color: #161b22 !important;
     }
 
-    /* Skjul standard 200MB og indsæt 20MB manuelt */
+    /* Retter 200MB til 20MB visuelt */
     [data-testid="stFileUploader"] small { visibility: hidden !important; height: 0px; }
     [data-testid="stFileUploader"] section::after {
         content: "Max 20MB per fil • JPG, PNG";
@@ -54,12 +51,8 @@ st.markdown("""
         margin-top: 28px !important;
     }
 
-    /* Sidebar og link */
     [data-testid="stSidebar"] { background-color: #161b22; border-right: 1px solid #30363d; }
-    .stSidebar a { color: #4daafc !important; text-decoration: underline !important; font-weight: bold; }
-    
-    /* Tabel tekst */
-    .stTable td, .stTable th { color: white !important; }
+    .stSidebar a { color: #4daafc !important; text-decoration: underline !important; }
     
     .custom-footer {
         position: fixed; left: 0; bottom: 0; width: 100%;
@@ -67,6 +60,8 @@ st.markdown("""
         text-align: center; padding: 15px; font-size: 12px;
         border-top: 1px solid #30363d; z-index: 999;
     }
+    .main .block-container { padding-bottom: 100px; }
+    .stTable td, .stTable th { color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -92,7 +87,7 @@ def create_pdf(image, exif_dict, s1, s2, s3, s4):
     temp_path = "temp_print.jpg"
     image.convert("RGB").save(temp_path, "JPEG")
     
-    # Side-om-side layout i PDF (Billede venstre, EXIF højre)
+    # PDF Layout: Billede til venstre, EXIF til højre
     pdf.image(temp_path, x=10, y=25, w=110)
     pdf.set_xy(125, 25)
     pdf.set_font("Arial", 'B', 12)
@@ -103,35 +98,26 @@ def create_pdf(image, exif_dict, s1, s2, s3, s4):
             pdf.set_x(125)
             pdf.cell(65, 6, f"{k}: {v}", ln=True)
     
-    # Feedback sektioner
+    # Feedback sektioner i to kolonner
     pdf.set_y(120)
     sections = [("1. Komposition", s1), ("2. Lys", s2), ("3. Historie", s3), ("Professionelle tips", s4)]
-    
-    # Lav 2 kolonner til feedbacken
     col_width = 90
     for i in range(0, len(sections), 2):
-        y_before = pdf.get_y()
-        # Venstre kolonne
+        y_text = pdf.get_y()
         pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width, 8, sections[i][0], ln=False)
-        # Højre kolonne
-        pdf.set_x(110)
-        pdf.cell(col_width, 8, sections[i+1][0], ln=True)
+        pdf.set_xy(10, y_text); pdf.cell(col_width, 8, sections[i][0])
+        pdf.set_xy(110, y_text); pdf.cell(col_width, 8, sections[i+1][0])
         
         pdf.set_font("Arial", '', 9)
-        y_text = pdf.get_y()
-        
-        # Venstre tekst
-        pdf.set_xy(10, y_text)
+        new_y = pdf.get_y() + 8
+        pdf.set_xy(10, new_y)
         pdf.multi_cell(col_width, 5, sections[i][1].encode('latin-1', 'replace').decode('latin-1'))
-        y_left = pdf.get_y()
+        y1 = pdf.get_y()
         
-        # Højre tekst
-        pdf.set_xy(110, y_text)
+        pdf.set_xy(110, new_y)
         pdf.multi_cell(col_width, 5, sections[i+1][1].encode('latin-1', 'replace').decode('latin-1'))
-        y_right = pdf.get_y()
-        
-        pdf.set_y(max(y_left, y_right) + 5)
+        y2 = pdf.get_y()
+        pdf.set_y(max(y1, y2) + 5)
 
     if os.path.exists(temp_path): os.remove(temp_path)
     return pdf.output(dest='S').encode('latin-1')
@@ -145,7 +131,7 @@ with st.sidebar:
 # HOVEDINDHOLD
 st.title("FOTO FEEDBACK")
 
-# Knapperække
+# Række med 3 kolonner til knapper
 btn_col1, btn_col2, btn_col3 = st.columns([2, 1, 1])
 with btn_col1:
     uploaded_file = st.file_uploader("Upload billede", type=["jpg", "jpeg", "png"])
@@ -164,17 +150,18 @@ if uploaded_file:
     image = Image.open(uploaded_file)
     exif = get_exif_data(image)
     
+    # Visning: Billede og EXIF side om side
     t1, t2 = st.columns([2, 1])
     with t1: st.image(image, use_container_width=True)
     with t2: 
         st.markdown("#### Tekniske EXIF-data")
-        st.table(exif) if exif else st.info("Ingen EXIF data")
+        st.table(exif) if exif else st.info("Ingen EXIF fundet.")
 
     if analyze_clicked and api_key:
-        with st.spinner("AI'en arbejder..."):
+        with st.spinner("AI'en analyserer billedet..."):
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel('gemini-flash-latest')
-            prompt = "Analyser billedet. Svar i 4 sektioner: [S1] Komposition, [S2] Lys, [S3] Historie, [S4] Tips. Svar på dansk."
+            prompt = "Analyser billedet. Svar på dansk i 4 sektioner: [S1] Komposition, [S2] Lys, [S3] Historie, [S4] Tips."
             res = model.generate_content([prompt, image])
             txt = res.text
             try:
@@ -184,13 +171,25 @@ if uploaded_file:
                 st.session_state['s4'] = txt.split("[S4]")[1].strip()
                 st.session_state['img'], st.session_state['exif'] = image, exif
                 st.rerun()
-            except: st.error("Kunne ikke opdele AI svaret. Prøv igen.")
+            except: st.error("Fejl i AI format. Prøv igen.")
 
+    # Feedback Layout
     if 's1' in st.session_state:
         st.divider()
         c1, c2 = st.columns(2)
-        with c1: 
+        with c1:
             st.markdown("### 1. Komposition og beskæring")
             st.write(st.session_state['s1'])
-        with c2: 
-            st.markdown("### 2.
+        with c2:
+            st.markdown("### 2. Lys og eksponering")
+            st.write(st.session_state['s2'])
+        st.divider()
+        c3, c4 = st.columns(2)
+        with c3:
+            st.markdown("### 3. Historie og stemning")
+            st.write(st.session_state['s3'])
+        with c4:
+            st.markdown("### Professionelle tips til forbedring")
+            st.success(st.session_state['s4'])
+
+st.markdown('<div class="custom-footer">FOTO FEEDBACK BY TOMMI HALLUM © 2026</div>', unsafe_allow_html=True)
