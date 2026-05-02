@@ -9,11 +9,12 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - KONSISTENT DESIGN
+# 2. CSS - OPTIMERET LAYOUT
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
     
+    /* Upload-felt styling */
     [data-testid="stFileUploader"] {
         background-color: #ffffff !important;
         border: 2px solid #4F46E5 !important;
@@ -44,6 +45,7 @@ st.markdown("""
         padding-bottom: 10px;
     }
 
+    /* Knap styling */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
@@ -121,17 +123,9 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf.multi_cell(190, 6, intro.encode('latin-1', 'replace').decode('latin-1'), border=1)
     pdf.ln(8)
     
-    sections = [
-        ("1. Komposition", s1), 
-        ("2. Lys & Teknik", s2), 
-        ("3. Historie & Stemning", s3), 
-        ("Professionelle Tips", s4)
-    ]
-    
+    sections = [("1. Komposition", s1), ("2. Lys & Teknik", s2), ("3. Historie & Stemning", s3), ("Professionelle Tips", s4)]
     for title, content in sections:
-        if pdf.get_y() > 240:
-            pdf.add_page()
-            
+        if pdf.get_y() > 240: pdf.add_page()
         pdf.set_font("Arial", 'B', 11)
         pdf.set_fill_color(*gray_section_bg)
         pdf.cell(190, 8, f" {title}", ln=True, fill=True, border=1)
@@ -139,26 +133,21 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
         pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'), border=1)
         pdf.ln(5)
         
-    # FOOTER I PDF
-    pdf.set_y(-35)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.set_text_color(*brand_blue)
-    pdf.cell(190, 7, "✨ ✨ ✨", ln=True, align='C')
-    
+    # FOOTER I PDF (Trin 1 layout)
+    pdf.set_y(-30)
     pdf.set_font("Arial", '', 8)
     pdf.set_text_color(150, 150, 150)
     pdf.cell(190, 5, "AI DREVET FOTO ANALYSE © 2026", ln=True, align='C')
     
     pdf.set_font("Arial", 'B', 12)
     pdf.set_text_color(*brand_blue)
-    pdf.cell(190, 7, "✨", ln=True, align='C')
+    pdf.cell(190, 7, "  * * * ", ln=True, align='C') # Simuleret luft mellem sparkels i PDF
     
     pdf.set_font("Arial", '', 9)
     pdf.set_text_color(100, 100, 100)
     pdf.cell(190, 5, "hallum.dk - dinfotomand.dk - fotoliv.dk", ln=True, align='C')
         
-    if os.path.exists("temp_report_img.jpg"):
-        os.remove("temp_report_img.jpg")
+    if os.path.exists("temp_report_img.jpg"): os.remove("temp_report_img.jpg")
     return pdf.output(dest='S').encode('latin-1')
 
 # 4. SIDEBAR
@@ -172,8 +161,12 @@ with st.sidebar:
     st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
     st.write("### Om appen")
+    # Trin 2: Tilføjet copyright i sidebar
     st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.")
     st.markdown("""
+        <div style="font-size: 12px; color: #888; margin-bottom: 15px;">
+            Udarbejdet og udviklet af Tommi Hallum © 2026
+        </div>
         <div style="font-size: 13px; color: #ccc; margin-top: 10px;">
             Gemini er AI og kan begå fejl, også om personer.<br>
             <a href="https://support.google.com/gemini/answer/13594961" target="_blank" style="color: #4F46E5; text-decoration: none;">Dit privatliv og Gemini</a>
@@ -202,7 +195,6 @@ status_placeholder = st.container()
 if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
-    
     c1, c2 = st.columns([2, 1])
     with c1: st.image(img, use_container_width=True)
     with c2: 
@@ -219,33 +211,16 @@ if uploaded:
                     try:
                         genai.configure(api_key=api_key)
                         model = genai.GenerativeModel('gemini-flash-latest')
-                        prompt = """Analyser dette billede som en professionel fotograf. 
-                        Start med en generel indledning om billedets førstehåndsindtryk.
-                        Brug derefter præcis disse overskrifter til at opdele din feedback:
-                        INDLEDNING:
-                        SEKTION1:
-                        SEKTION2:
-                        SEKTION3:
-                        SEKTION4:
-                        Giv dybdegående feedback på dansk."""
-                        
+                        prompt = "Analyser dette billede som en professionel fotograf. Start med en generel indledning. Brug overskrifter: INDLEDNING:, SEKTION1:, SEKTION2:, SEKTION3:, SEKTION4:. Giv dybdegående feedback på dansk."
                         res = model.generate_content([prompt, img])
                         text = res.text
                         parts = re.split(r'(INDLEDNING:|SEKTION1:|SEKTION2:|SEKTION3:|SEKTION4:)', text)
-                        
                         def get_content(label):
-                            try:
-                                idx = parts.index(label)
-                                return parts[idx+1].strip()
+                            try: return parts[parts.index(label)+1].strip()
                             except: return ""
-
-                        st.session_state['intro'] = get_content('INDLEDNING:')
-                        st.session_state['s1'] = get_content('SEKTION1:')
-                        st.session_state['s2'] = get_content('SEKTION2:')
-                        st.session_state['s3'] = get_content('SEKTION3:')
-                        st.session_state['s4'] = get_content('SEKTION4:')
+                        st.session_state['intro'], st.session_state['s1'], st.session_state['s2'] = get_content('INDLEDNING:'), get_content('SEKTION1:'), get_content('SEKTION2:')
+                        st.session_state['s3'], st.session_state['s4'] = get_content('SEKTION3:'), get_content('SEKTION4:')
                         st.session_state['img'], st.session_state['exif'] = img, exif_data
-                        
                         status.update(label="Analyse færdig!", state="complete", expanded=False)
                         st.rerun()
                     except Exception as e:
@@ -256,21 +231,20 @@ if uploaded:
         st.divider()
         st.write("### ✨ Samlet Vurdering")
         st.info(st.session_state['intro'])
-        
         r1, r2 = st.columns(2)
         with r1: st.subheader("✨ 1. Komposition"); st.write(st.session_state['s1'])
         with r2: st.subheader("✨ 2. Lys & Teknik"); st.write(st.session_state['s2'])
-        
         r3, r4 = st.columns(2)
         with r3: st.subheader("✨ 3. Historie & Stemning"); st.write(st.session_state['s3'])
         with r4: st.subheader("✨ Professionelle Tips"); st.success(st.session_state['s4'])
 
-# 7. GRAFISK FOOTER
+# 7. GRAFISK FOOTER (Trin 1 Layout)
 st.markdown("""
     <div style="text-align:center; padding:40px 20px; color:#888; font-size:13px; margin-top:50px; border-top:1px solid #333;">
-        <div style="font-size:24px; color:#4F46E5; margin-bottom:5px;">✨ ✨ ✨</div>
-        <div style="font-weight:bold; color:#555; margin-bottom:10px;">AI DREVET FOTO ANALYSE © 2026</div>
-        <div style="font-size:24px; color:#4F46E5; margin-bottom:10px;">✨</div>
-        <div style="letter-spacing:1px;">hallum.dk • dinfotomand.dk • fotoliv.dk</div>
+        <div style="font-weight:bold; color:#555; margin-bottom:5px;">AI DREVET FOTO ANALYSE © 2026</div>
+        <div style="font-size:22px; color:#4F46E5; margin-bottom:15px; display: flex; justify-content: center; gap: 40px;">
+            <span>✨</span><span>✨</span><span>✨</span>
+        </div>
+        <div style="letter-spacing:1px; margin-top: 10px;">hallum.dk • dinfotomand.dk • fotoliv.dk</div>
     </div>
 """, unsafe_allow_html=True)
