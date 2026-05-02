@@ -114,12 +114,15 @@ with st.sidebar:
     st.title("Indstillinger")
     api_key = st.text_input("Gemini API Nøgle:", type="password")
     st.divider()
+    
+    # NY PLACERING: Mangler du en nøgle?
+    st.markdown('**Mangler du en nøgle?**')
+    st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
+    st.divider()
+    
     st.write("### Om appen")
     st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik og æstetik.")
     st.markdown('<div style="font-size: 13px; color: #ccc;">Gemini er AI og kan begå fejl, også om personer. <a href="https://support.google.com/gemini/answer/13594961" target="_blank" style="color: #4F46E5;">Dit privatliv og Gemini</a></div>', unsafe_allow_html=True)
-    st.divider()
-    st.markdown('**Mangler du en nøgle?**')
-    st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
 
 # Knapperække
 col_u, col_a, col_p = st.columns([2, 1, 1])
