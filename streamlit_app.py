@@ -59,7 +59,7 @@ st.markdown("""
         border: none !important;
     }
     </style>
-""", unsafe_html=True)
+""", unsafe_allow_html=True)
 
 # 3. FUNKTIONER
 def get_exif(image):
