@@ -9,6 +9,7 @@ import os
 # 1. DESIGN & LAYOUT KONFIGURATION
 st.set_page_config(page_title="Foto Feedback - AI Analyse", layout="wide")
 
+# CSS: Tvinger designet på plads og retter 200MB -> 20MB visuelt
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
@@ -23,10 +24,8 @@ st.markdown("""
     [data-testid="stFileUploader"] section { color: #0e1117 !important; padding: 0px; }
     [data-testid="stFileUploader"] label { color: #0e1117 !important; }
     
-    /* Rettelse af 200MB til 20MB tekst */
-    [data-testid="stFileUploader"] small {
-        visibility: hidden;
-    }
+    /* Tvinger 20MB tekst frem */
+    [data-testid="stFileUploader"] small { visibility: hidden; }
     [data-testid="stFileUploader"] small::before {
         content: "Max 20MB per fil • JPG, PNG";
         visibility: visible;
@@ -45,6 +44,7 @@ st.markdown("""
         margin-top: 28px;
     }
     
+    /* Sidebar og Footer */
     [data-testid="stSidebar"] { background-color: #161b22; border-right: 1px solid #30363d; }
     .stSidebar a { color: #4daafc !important; text-decoration: underline !important; }
     
@@ -107,10 +107,13 @@ with st.sidebar:
     st.title("Indstillinger")
     api_key = st.text_input("Indsæt din Gemini API-nøgle her:", type="password")
     st.markdown('Få din nøgle hos <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>', unsafe_allow_html=True)
+    st.divider()
+    st.write("Om appen: Professionel fotoanalyse drevet af AI.")
 
 # 3. HOVEDINDHOLD
 st.title("FOTO FEEDBACK")
 
+# Knapperække
 btn_col1, btn_col2, btn_col3 = st.columns([2, 1, 1])
 
 with btn_col1:
@@ -132,41 +135,41 @@ if uploaded_file:
     image = Image.open(uploaded_file)
     exif = get_exif_data(image)
     
+    # Vis billede og EXIF side om side
     top1, top2 = st.columns([2, 1])
     with top1: st.image(image, use_container_width=True)
     with top2: 
         st.markdown("#### Tekniske EXIF-data")
-        st.table(exif) if exif else st.info("Ingen EXIF data")
+        if exif:
+            st.table(exif)
+        else:
+            st.info("Ingen EXIF fundet.")
 
     if analyze_clicked:
         if not api_key:
             st.error("Indsæt venligst API-nøgle i sidemenuen.")
         else:
-            # RETTELSE HER: Brug af dobbelte anførselstegn for at undgå fejl med AI'en
             with st.spinner("AI'en analyserer dit billede..."):
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-flash-latest')
-                prompt = """
-                Analyser billedet og svar KUN i disse 4 sektioner:
-                [SEKTION1] Komposition og beskæring:
-                [SEKTION2] Lys og eksponering:
-                [SEKTION3] Historie og stemning:
-                [SEKTION4] Professionelle tips til forbedring:
-                Svar på dansk.
-                """
+                # Vi beder AI svare helt uden markdown-tabel format
+                prompt = "Analyser billedet. Svar på dansk i 4 sektioner: [S1] Komposition, [S2] Lys, [S3] Historie, [S4] Tips. Undgå at bruge tabeller i dit svar."
                 response = model.generate_content([prompt, image])
                 txt = response.text
+                
+                # Split-logik der er mere robust overfor formatering
                 try:
-                    st.session_state['s1'] = txt.split("[SEKTION2]")[0].replace("[SEKTION1]", "").strip()
-                    st.session_state['s2'] = txt.split("[SEKTION2]")[1].split("[SEKTION3]")[0].strip()
-                    st.session_state['s3'] = txt.split("[SEKTION3]")[1].split("[SEKTION4]")[0].strip()
-                    st.session_state['s4'] = txt.split("[SEKTION4]")[1].strip()
+                    st.session_state['s1'] = txt.split("[S2]")[0].replace("[S1]", "").strip()
+                    st.session_state['s2'] = txt.split("[S2]")[1].split("[S3]")[0].strip()
+                    st.session_state['s3'] = txt.split("[S3]")[1].split("[S4]")[0].strip()
+                    st.session_state['s4'] = txt.split("[S4]")[1].strip()
                     st.session_state['img'] = image
                     st.session_state['exif'] = exif
                     st.rerun()
                 except:
-                    st.error("AI'en gav et svar i et uventet format. Prøv igen.")
+                    st.error("AI'en gav et svar der ikke kunne deles op. Prøv igen.")
 
+    # Visning af analysen
     if 's1' in st.session_state:
         st.divider()
         r1_c1, r1_c2 = st.columns(2)
@@ -186,4 +189,5 @@ if uploaded_file:
             st.markdown("### Professionelle tips til forbedring")
             st.success(st.session_state['s4'])
 
+# 4. FOOTER
 st.markdown('<div class="custom-footer">FOTO FEEDBACK BY TOMMI HALLUM © 2026</div>', unsafe_allow_html=True)
