@@ -160,20 +160,17 @@ with st.sidebar:
     st.markdown('**Mangler du en nøgle?**')
     st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
+    
     st.write("### Om appen")
     # Den blå boks med Om appen tekst og copyright
     st.info("""Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.
     \n\nUdarbejdet og udviklet af Tommi Hallum © 2026""")
     
-    # Linje der adskiller boksen og privatlivsteksten (Trin 2)
     st.divider()
     
-    st.markdown("""
-        <div style="font-size: 13px; color: #ccc; margin-top: 10px;">
-            Gemini er AI og kan begå fejl, også om personer.<br>
-            <a href="https://support.google.com/gemini/answer/13594961" target="_blank" style="color: #4F46E5; text-decoration: none;">Dit privatliv og Gemini</a>
-        </div>
-    """, unsafe_allow_html=True)
+    # Trin: Privatlivslink opdateret jf. ønske
+    st.markdown('**Gemini er AI og kan begå fejl**')
+    st.markdown('[Dit privatliv, data og Gemini](https://support.google.com/gemini/answer/13594961)', unsafe_allow_html=True)
 
 # 5. HOVEDLAYOUT
 col_u, col_a, col_p = st.columns([2, 1, 1])
