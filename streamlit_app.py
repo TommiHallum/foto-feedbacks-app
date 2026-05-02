@@ -115,11 +115,12 @@ with st.sidebar:
     api_key = st.text_input("Gemini API Nøgle:", type="password")
     st.divider()
     
-    # NY PLACERING: Mangler du en nøgle?
+    # 1. AFNSIT: Mangler du en nøgle?
     st.markdown('**Mangler du en nøgle?**')
     st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
     
+    # 2. AFSNIT: Om appen
     st.write("### Om appen")
     st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik og æstetik.")
     st.markdown('<div style="font-size: 13px; color: #ccc;">Gemini er AI og kan begå fejl, også om personer. <a href="https://support.google.com/gemini/answer/13594961" target="_blank" style="color: #4F46E5;">Dit privatliv og Gemini</a></div>', unsafe_allow_html=True)
@@ -163,7 +164,9 @@ if uploaded:
             with st.spinner("AI analyserer..."):
                 try:
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    # HER ER DEN RETTEDE MODEL:
+                    model = genai.GenerativeModel('gemini-flash-latest')
+                    
                     prompt = """Analyser dette billede professionelt. 
                     Du SKAL starte hver sektion med præcis disse overskrifter:
                     SEKTION1:
@@ -175,6 +178,7 @@ if uploaded:
                     res = model.generate_content([prompt, img])
                     full_text = res.text
                     
+                    # Robust splitting
                     parts = re.split(r'SEKTION\d:', full_text)
                     
                     if len(parts) >= 5:
