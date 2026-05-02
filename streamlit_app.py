@@ -9,66 +9,45 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - FIX AF LAYOUT OG FLUGTNING
+# 2. CSS - OPTIMERET TIL KOMPAKT LAYOUT OG FEEDBACK
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
-    
-    /* Sidebar kompakte afstande */
     [data-testid="stSidebar"] { padding-top: 0.5rem !important; }
-    [data-testid="stSidebar"] h1 { font-size: 1.4rem !important; margin-bottom: 0.5rem !important; }
-    [data-testid="stSidebar"] h4 { margin: 0.2rem 0 !important; }
-    [data-testid="stSidebar"] .stInfo { padding: 0.5rem !important; margin: 0.2rem 0 !important; }
     
-    /* Tvinger knapper og upload til at flugte i bunden */
-    [data-testid="column"] {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-    }
-
-    /* Upload-felt styling */
+    /* Upload og Knapper */
     [data-testid="stFileUploader"] {
         background-color: #ffffff !important;
         border: 2px solid #4F46E5 !important;
         border-radius: 8px !important;
         padding: 5px !important;
-        margin-bottom: 0px !important;
     }
     [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] small, [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p { display: none !important; }
     [data-testid="stFileUploader"] section::before { content: "UPLOAD BILLEDE"; display: block; color: #4F46E5 !important; font-weight: bold; text-align: center; padding-top: 5px; }
     [data-testid="stFileUploader"] section::after { content: "JPG, PNG (Max 20MB)"; display: block; color: #666666 !important; font-size: 10px; text-align: center; padding-bottom: 5px; }
 
-    /* Knap styling - Justeret højde for at matche upload felt */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
         border-radius: 8px !important;
         font-weight: bold !important;
-        height: 3.85em !important; /* Præcis højde-match */
+        height: 3.8em !important;
         width: 100% !important;
         border: none !important;
         text-transform: uppercase;
-        margin-bottom: 0px !important;
     }
-    
-    /* Fjerner standard Streamlit padding i bunden af widgets */
-    .stElementContainer { margin-bottom: 0px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. HJÆLPEFUNKTIONER
+# 3. HJÆLPEFUNKTIONER (PDF CLASS MED FOOTER)
 class PDF(FPDF):
     def footer(self):
         self.set_y(-25)
-        self.set_font("Arial", '', 8)
-        self.set_text_color(150, 150, 150)
+        self.set_font("Arial", '', 8); self.set_text_color(150, 150, 150)
         self.cell(0, 5, "AI DREVET FOTO ANALYSE © 2026", ln=True, align='C')
-        self.set_font("Arial", 'B', 10)
-        self.set_text_color(79, 70, 229)
+        self.set_font("Arial", 'B', 10); self.set_text_color(79, 70, 229)
         self.cell(0, 5, "✨ ✨ ✨", ln=True, align='C')
-        self.set_font("Arial", '', 8)
-        self.set_text_color(100, 100, 100)
+        self.set_font("Arial", '', 8); self.set_text_color(100, 100, 100)
         self.cell(0, 5, "hallum.dk - dinfotomand.dk - fotoliv.dk", ln=True, align='C')
 
 def get_exif(image):
@@ -88,7 +67,6 @@ def get_exif(image):
                     elif name == 'Model': exif['Kamera'] = val
                     elif name == 'LensModel': exif['Objektiv'] = val
                     else: exif[name] = str(val)
-                
                 if name == "GPSInfo":
                     gps = {}
                     for t in val: gps[GPSTAGS.get(t, t)] = val[t]
@@ -125,35 +103,64 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
 # 4. SIDEBAR
 st.title("FOTO FEEDBACK")
 with st.sidebar:
-    st.markdown("#### Indstillinger")
     api_key = st.text_input("Gemini API Nøgle:", type="password")
-    st.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
-    st.markdown('**Mangler du en nøgle?**')
-    st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)')
-    st.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
-    st.markdown("#### Om appen")
-    st.info("""Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.
-    \n\nUdarbejdet og udviklet af Tommi Hallum © 2026""")
-    st.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
-    st.markdown('**Gemini er AI og kan begå fejl**')
-    st.markdown('[Dit privatliv, data og Gemini](https://support.google.com/gemini/answer/13594961)')
+    st.info("Professionel fotoanalyse drevet af AI. Udarbejdet af Tommi Hallum © 2026")
 
-# 5. HOVEDLAYOUT (Justerede kolonne-vægte)
+# 5. HOVEDLAYOUT
 col_u, col_a, col_p = st.columns([1.5, 1, 1])
-with col_u:
-    uploaded = st.file_uploader("", type=["jpg", "png"])
-with col_a:
-    analyze_btn = st.button("🚀 Analyser", use_container_width=True)
+with col_u: uploaded = st.file_uploader("", type=["jpg", "png"])
+with col_a: analyze_btn = st.button("🚀 Analyser", use_container_width=True)
 with col_p:
     if 'intro' in st.session_state:
         pdf_data = create_pdf(st.session_state['img'], st.session_state['exif'], st.session_state['intro'], st.session_state['s1'], st.session_state['s2'], st.session_state['s3'], st.session_state['s4'])
         st.download_button("📥 Hent PDF", data=pdf_data, file_name="foto-feedback.pdf", mime="application/pdf", use_container_width=True)
-    else:
-        st.button("📥 Hent PDF", disabled=True, use_container_width=True)
+    else: st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
+# 6. FEEDBACK CONTAINER (Flyttet ud, så den altid er synlig)
 status_placeholder = st.container()
 
-# 6. LOGIK
+# 7. LOGIK
 if uploaded:
     img = Image.open(uploaded)
-    exif_data = get_exif
+    exif_data = get_exif(img)
+    c1, c2 = st.columns([1.5, 1])
+    with c1: st.image(img, use_container_width=True)
+    with c2: 
+        st.write("### Tekniske Data")
+        if exif_data: st.table(list(exif_data.items()))
+        else: st.info("Ingen EXIF data fundet")
+
+    if analyze_btn:
+        if not api_key:
+            status_placeholder.warning("⚠️ Indtast venligst din API-nøgle.")
+        else:
+            with status_placeholder:
+                with st.status("AI analyserer billedet...", expanded=True) as status:
+                    try:
+                        genai.configure(api_key=api_key)
+                        res = genai.GenerativeModel('gemini-flash-latest').generate_content(["Analyser dette billede som en professionel fotograf. Brug overskrifter: INDLEDNING:, SEKTION1:, SEKTION2:, SEKTION3:, SEKTION4:. Giv dybdegående feedback på dansk.", img])
+                        parts = re.split(r'(INDLEDNING:|SEKTION1:|SEKTION2:|SEKTION3:|SEKTION4:)', res.text)
+                        st.session_state.update({
+                            'intro': parts[parts.index('INDLEDNING:')+1].strip() if 'INDLEDNING:' in parts else "", 
+                            's1': parts[parts.index('SEKTION1:')+1].strip() if 'SEKTION1:' in parts else "", 
+                            's2': parts[parts.index('SEKTION2:')+1].strip() if 'SEKTION2:' in parts else "", 
+                            's3': parts[parts.index('SEKTION3:')+1].strip() if 'SEKTION3:' in parts else "", 
+                            's4': parts[parts.index('SEKTION4:')+1].strip() if 'SEKTION4:' in parts else "", 
+                            'img': img, 'exif': exif_data
+                        })
+                        status.update(label="Analyse færdig!", state="complete", expanded=False)
+                        st.rerun()
+                    except Exception as e:
+                        status.update(label="Fejl", state="error")
+                        st.error(f"Fejl: {e}")
+
+    if 'intro' in st.session_state:
+        st.divider()
+        st.write("### ✨ Samlet Vurdering")
+        st.info(st.session_state['intro'])
+        r1, r2 = st.columns(2)
+        with r1: st.subheader("✨ 1. Komposition"); st.write(st.session_state['s1'])
+        with r2: st.subheader("✨ 2. Lys & Teknik"); st.write(st.session_state['s2'])
+        r3, r4 = st.columns(2)
+        with r3: st.subheader("✨ 3. Historie & Stemning"); st.write(st.session_state['s3'])
+        with r4: st.subheader("✨ Professionelle Tips"); st.success(st.session_state['s4'])
