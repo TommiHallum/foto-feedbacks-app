@@ -13,7 +13,7 @@ api_key = st.sidebar.text_input("Indsæt din Gemini API Key her:", type="passwor
 if api_key:
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
         # 3. Upload felt
         uploaded_file = st.file_uploader("Vælg et billede...", type=["jpg", "jpeg", "png"])
