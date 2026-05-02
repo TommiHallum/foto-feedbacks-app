@@ -44,7 +44,7 @@ st.divider()
 if api_key:
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash') # Opdateret til nyeste stabile version
+        model = genai.GenerativeModel('gemini-flash-latest') # Opdateret til nyeste stabile version
 
         col1, col2 = st.columns([1, 1], gap="large")
 
