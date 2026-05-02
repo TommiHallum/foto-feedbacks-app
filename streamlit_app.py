@@ -14,7 +14,7 @@ st.markdown("""
     .stApp { background-color: #0e1117; color: #ffffff; }
     h1, h2, h3, h4, p, span { color: #ffffff !important; }
     
-    /* Upload felt styling - Optimering af tekst */
+    /* Upload felt styling */
     [data-testid="stFileUploader"] {
         background-color: #f0f2f6;
         padding: 5px;
@@ -23,7 +23,7 @@ st.markdown("""
     [data-testid="stFileUploader"] section { color: #0e1117 !important; padding: 0px; }
     [data-testid="stFileUploader"] label { color: #0e1117 !important; }
     
-    /* HER RETTER VI 200MB TIL 20MB I TEKSTEN */
+    /* Rettelse af 200MB til 20MB tekst */
     [data-testid="stFileUploader"] small {
         visibility: hidden;
     }
@@ -90,7 +90,7 @@ def create_pdf(image, exif_dict, s1, s2, s3, s4):
             pdf.cell(200, 7, f"{k}: {v}", ln=True)
     
     pdf.ln(5)
-    sections = [("Komposition og beskæring", s1), ("Lys og eksponering", s2), ("Historie og stemning", s3), ("Professionelle tips", s4)]
+    sections = [("Komposition", s1), ("Lys", s2), ("Historie", s3), ("Tips", s4)]
     for title, text in sections:
         pdf.set_font("Arial", 'B', 11)
         pdf.cell(200, 8, title + ":", ln=True)
@@ -107,13 +107,10 @@ with st.sidebar:
     st.title("Indstillinger")
     api_key = st.text_input("Indsæt din Gemini API-nøgle her:", type="password")
     st.markdown('Få din nøgle hos <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>', unsafe_allow_html=True)
-    st.divider()
-    st.write("Professionel AI Analyse")
 
 # 3. HOVEDINDHOLD
 st.title("FOTO FEEDBACK")
 
-# Layout med 3 kolonner til knapper
 btn_col1, btn_col2, btn_col3 = st.columns([2, 1, 1])
 
 with btn_col1:
@@ -135,7 +132,6 @@ if uploaded_file:
     image = Image.open(uploaded_file)
     exif = get_exif_data(image)
     
-    # Trin 1: Billede og EXIF side om side
     top1, top2 = st.columns([2, 1])
     with top1: st.image(image, use_container_width=True)
     with top2: 
@@ -146,7 +142,8 @@ if uploaded_file:
         if not api_key:
             st.error("Indsæt venligst API-nøgle i sidemenuen.")
         else:
-            with st.spinner('AI'en analyserer dit billede...'):
+            # RETTELSE HER: Brug af dobbelte anførselstegn for at undgå fejl med AI'en
+            with st.spinner("AI'en analyserer dit billede..."):
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-flash-latest')
                 prompt = """
@@ -159,18 +156,19 @@ if uploaded_file:
                 """
                 response = model.generate_content([prompt, image])
                 txt = response.text
-                st.session_state['s1'] = txt.split("[SEKTION2]")[0].replace("[SEKTION1]", "").strip()
-                st.session_state['s2'] = txt.split("[SEKTION2]")[1].split("[SEKTION3]")[0].strip()
-                st.session_state['s3'] = txt.split("[SEKTION3]")[1].split("[SEKTION4]")[0].strip()
-                st.session_state['s4'] = txt.split("[SEKTION4]")[1].strip()
-                st.session_state['img'] = image
-                st.session_state['exif'] = exif
-                st.rerun()
+                try:
+                    st.session_state['s1'] = txt.split("[SEKTION2]")[0].replace("[SEKTION1]", "").strip()
+                    st.session_state['s2'] = txt.split("[SEKTION2]")[1].split("[SEKTION3]")[0].strip()
+                    st.session_state['s3'] = txt.split("[SEKTION3]")[1].split("[SEKTION4]")[0].strip()
+                    st.session_state['s4'] = txt.split("[SEKTION4]")[1].strip()
+                    st.session_state['img'] = image
+                    st.session_state['exif'] = exif
+                    st.rerun()
+                except:
+                    st.error("AI'en gav et svar i et uventet format. Prøv igen.")
 
-    # Layout for analysen jf. dine trin
     if 's1' in st.session_state:
         st.divider()
-        # Trin 2 & 3: Komposition (venstre) og Lys (højre)
         r1_c1, r1_c2 = st.columns(2)
         with r1_c1: 
             st.markdown("### 1. Komposition og beskæring")
@@ -180,7 +178,6 @@ if uploaded_file:
             st.write(st.session_state['s2'])
         
         st.divider()
-        # Trin 4 & 5: Historie (venstre) og Tips (højre)
         r2_c1, r2_c2 = st.columns(2)
         with r2_c1: 
             st.markdown("### 3. Historie og stemning")
@@ -189,5 +186,4 @@ if uploaded_file:
             st.markdown("### Professionelle tips til forbedring")
             st.success(st.session_state['s4'])
 
-# 4. FOOTER
 st.markdown('<div class="custom-footer">FOTO FEEDBACK BY TOMMI HALLUM © 2026</div>', unsafe_allow_html=True)
