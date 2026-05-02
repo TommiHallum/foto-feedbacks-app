@@ -59,7 +59,7 @@ st.markdown("""
         border: none !important;
     }
     </style>
-""", unsafe_allow_html=True)
+""", unsafe_html=True)
 
 # 3. FUNKTIONER
 def get_exif(image):
@@ -74,7 +74,7 @@ def get_exif(image):
     except: pass
     return exif
 
-def create_pdf(img, exif, s1, s2, s3, s4):
+def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf = FPDF()
     pdf.add_page()
     
@@ -83,30 +83,31 @@ def create_pdf(img, exif, s1, s2, s3, s4):
     pdf.cell(190, 10, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
     pdf.ln(5)
     
-    # Gem billede midlertidigt til PDF
+    # Gem billede midlertidigt
     img.convert("RGB").save("temp_p.jpg", "JPEG")
     
-    # Placer billede (skaleret ned til w=80)
-    pdf.image("temp_p.jpg", x=10, y=30, w=80)
+    # Billede (skaleret) og EXIF side om side
+    pdf.image("temp_p.jpg", x=10, y=30, w=85)
     
-    # Placer EXIF data til højre for billedet (x=100)
-    pdf.set_xy(100, 30)
+    pdf.set_xy(105, 30)
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(90, 8, "Tekniske Data (EXIF):", ln=True)
     pdf.set_font("Arial", '', 10)
     if exif:
         for k, v in exif.items():
-            pdf.set_x(100)
+            pdf.set_x(105)
             pdf.cell(90, 6, f"{k}: {v}", ln=True)
     else:
-        pdf.set_x(100)
+        pdf.set_x(105)
         pdf.cell(90, 6, "Ingen EXIF data fundet", ln=True)
 
-    # Bestem y-position for analysen (under billedet eller EXIF, hvad end der er lavest)
-    # Vi sætter den fast til y=100 for at være sikker på at være under billedet
-    pdf.set_y(100)
-    pdf.ln(10)
+    # Indledning (placeres under billede-sektionen)
+    pdf.set_y(105)
+    pdf.set_font("Arial", 'I', 11)
+    pdf.multi_cell(190, 6, intro.encode('latin-1', 'replace').decode('latin-1'))
+    pdf.ln(5)
     
+    # Sektioner
     sections = [
         ("1. Komposition", s1), 
         ("2. Lys & Teknik", s2), 
@@ -119,8 +120,7 @@ def create_pdf(img, exif, s1, s2, s3, s4):
         pdf.set_fill_color(240, 242, 246)
         pdf.cell(190, 8, title, ln=True, fill=True)
         pdf.set_font("Arial", '', 10)
-        # Multi_cell sikrer linjeskift. Vi bruger 'latin-1' replace for at undgå fejl med specielle tegn
-        pdf.multi_cell(190, 6, content.encode('latin-1', 'replace').decode('latin-1'))
+        pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'))
         pdf.ln(4)
         
     os.remove("temp_p.jpg")
@@ -134,7 +134,7 @@ with st.sidebar:
     api_key = st.text_input("Gemini API Nøgle:", type="password")
     st.divider()
     st.markdown('**Mangler du en nøgle?**')
-    st.markdown('[Få din Gemini API-nøgle her](https://a1studio.google.com/app/apikey)', unsafe_allow_html=True)
+    st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
     st.write("### Om appen")
     st.info("Professionel fotoanalyse drevet af AI.")
@@ -152,10 +152,11 @@ with col_u:
 with col_a:
     analyze_btn = st.button("🚀 Analyser", use_container_width=True)
 with col_p:
-    if 's1' in st.session_state:
+    if 'intro' in st.session_state:
         pdf_file = create_pdf(st.session_state['img'], st.session_state['exif'], 
-                              st.session_state['s1'], st.session_state['s2'], 
-                              st.session_state['s3'], st.session_state['s4'])
+                              st.session_state['intro'], st.session_state['s1'], 
+                              st.session_state['s2'], st.session_state['s3'], 
+                              st.session_state['s4'])
         st.download_button("📥 Hent PDF", data=pdf_file, file_name="feedback.pdf", mime="application/pdf", use_container_width=True)
     else:
         st.button("📥 Hent PDF", disabled=True, use_container_width=True)
@@ -176,38 +177,57 @@ if uploaded:
 
     if analyze_btn:
         if not api_key:
-            with status_placeholder:
-                st.warning("⚠️ Indtast API-nøgle i menuen til venstre.")
+            with status_placeholder: st.warning("⚠️ Indtast API-nøgle i menuen.")
         else:
             with status_placeholder:
                 with st.status("AI analyserer billedet...", expanded=True) as status:
                     try:
                         genai.configure(api_key=api_key)
                         model = genai.GenerativeModel('gemini-flash-latest')
-                        prompt = "Analyser dette billede professionelt. Du SKAL starte hver sektion med præcis disse overskrifter: SEKTION1: SEKTION2: SEKTION3: SEKTION4: Giv dybdegående feedback på dansk."
-                        res = model.generate_content([prompt, img])
-                        parts = re.split(r'SEKTION\d:', res.text)
+                        prompt = """Analyser dette billede som en professionel fotograf. 
+                        Start med en generel indledning om billedets førstehåndsindtryk.
+                        Brug derefter præcis disse overskrifter til at opdele din feedback:
+                        INDLEDNING:
+                        SEKTION1:
+                        SEKTION2:
+                        SEKTION3:
+                        SEKTION4:
+                        Giv dybdegående feedback på dansk."""
                         
-                        if len(parts) >= 5:
-                            st.session_state['s1'] = parts[1].strip()
-                            st.session_state['s2'] = parts[2].strip()
-                            st.session_state['s3'] = parts[3].strip()
-                            st.session_state['s4'] = parts[4].strip()
-                            st.session_state['img'], st.session_state['exif'] = img, exif_data
-                            status.update(label="Analyse færdig!", state="complete", expanded=False)
-                            st.rerun()
-                        else:
-                            status.update(label="Formatfejl", state="error")
-                            st.error("AI'en svarede i et forkert format.")
+                        res = model.generate_content([prompt, img])
+                        text = res.text
+                        
+                        # Split ved hjælp af overskrifterne
+                        parts = re.split(r'(INDLEDNING:|SEKTION1:|SEKTION2:|SEKTION3:|SEKTION4:)', text)
+                        
+                        def get_content(label):
+                            try:
+                                idx = parts.index(label)
+                                return parts[idx+1].strip()
+                            except: return ""
+
+                        st.session_state['intro'] = get_content('INDLEDNING:')
+                        st.session_state['s1'] = get_content('SEKTION1:')
+                        st.session_state['s2'] = get_content('SEKTION2:')
+                        st.session_state['s3'] = get_content('SEKTION3:')
+                        st.session_state['s4'] = get_content('SEKTION4:')
+                        st.session_state['img'], st.session_state['exif'] = img, exif_data
+                        
+                        status.update(label="Analyse færdig!", state="complete", expanded=False)
+                        st.rerun()
                     except Exception as e:
                         status.update(label="Fejl", state="error")
                         st.error(f"Fejl: {e}")
 
-    if 's1' in st.session_state:
+    if 'intro' in st.session_state:
         st.divider()
+        st.write("### Samlet Vurdering")
+        st.info(st.session_state['intro'])
+        
         r1, r2 = st.columns(2)
         with r1: st.subheader("1. Komposition"); st.write(st.session_state['s1'])
         with r2: st.subheader("2. Lys & Teknik"); st.write(st.session_state['s2'])
+        
         r3, r4 = st.columns(2)
         with r3: st.subheader("3. Historie & Stemning"); st.write(st.session_state['s3'])
         with r4: st.subheader("Professionelle Tips"); st.success(st.session_state['s4'])
