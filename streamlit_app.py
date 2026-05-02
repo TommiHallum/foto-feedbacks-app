@@ -28,7 +28,7 @@ st.markdown("""
         display: none !important;
     }
 
-    /* Indsæt vores egen tekst i sort */
+    /* Indsæt egen tekst i sort */
     [data-testid="stFileUploader"] section::before {
         content: "UPLOAD BILLEDE HER";
         display: block;
@@ -43,7 +43,7 @@ st.markdown("""
         font-size: 13px;
     }
 
-    /* Store lilla knapper (Analyse & Download) */
+    /* Store lilla knapper */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
@@ -106,9 +106,14 @@ def create_pdf(img, exif, s1, s2, s3, s4):
     os.remove("temp_p.jpg")
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. HOVEDLAYOUT
+# 4. SIDEBAR & HOVEDLAYOUT
 st.title("FOTO FEEDBACK")
-api_key = st.sidebar.text_input("Gemini API Nøgle:", type="password")
+
+with st.sidebar:
+    st.title("Indstillinger")
+    api_key = st.text_input("Gemini API Nøgle:", type="password")
+    st.divider()
+    st.info("Om appen: Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på komposition, lys og historie.")
 
 # De tre knapper på stribe
 col_u, col_a, col_p = st.columns([2, 1, 1])
@@ -124,16 +129,15 @@ with col_p:
         pdf_file = create_pdf(st.session_state['img'], st.session_state['exif'], 
                               st.session_state['s1'], st.session_state['s2'], 
                               st.session_state['s3'], st.session_state['s4'])
-        st.download_button("📥 Hent PDF", data=pdf_file, file_name="feedback.pdf", mime="application/pdf")
+        st.download_button("📥 Hent PDF", data=pdf_file, file_name="feedback.pdf", mime="application/pdf", use_container_width=True)
     else:
-        st.button("📥 Hent PDF", disabled=True, help="Kør analysen først")
+        st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
 # 5. LOGIK NÅR BILLEDE ER UPLOADET
 if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
     
-    # Vis billede og data side om side
     c1, c2 = st.columns([2, 1])
     with c1: st.image(img, use_container_width=True)
     with c2: 
