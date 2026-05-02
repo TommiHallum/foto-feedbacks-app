@@ -9,7 +9,7 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - OPTIMERET LAYOUT
+# 2. CSS - KONSISTENT DESIGN
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
@@ -133,7 +133,7 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
         pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'), border=1)
         pdf.ln(5)
         
-    # FOOTER I PDF (Trin 1 layout)
+    # FOOTER I PDF
     pdf.set_y(-30)
     pdf.set_font("Arial", '', 8)
     pdf.set_text_color(150, 150, 150)
@@ -141,7 +141,7 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     
     pdf.set_font("Arial", 'B', 12)
     pdf.set_text_color(*brand_blue)
-    pdf.cell(190, 7, "  * * * ", ln=True, align='C') # Simuleret luft mellem sparkels i PDF
+    pdf.cell(190, 7, "  * * * ", ln=True, align='C')
     
     pdf.set_font("Arial", '', 9)
     pdf.set_text_color(100, 100, 100)
@@ -161,12 +161,14 @@ with st.sidebar:
     st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
     st.write("### Om appen")
-    # Trin 2: Tilføjet copyright i sidebar
-    st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.")
+    # Den blå boks med Om appen tekst og copyright
+    st.info("""Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik.
+    \n\nUdarbejdet og udviklet af Tommi Hallum © 2026""")
+    
+    # Linje der adskiller boksen og privatlivsteksten (Trin 2)
+    st.divider()
+    
     st.markdown("""
-        <div style="font-size: 12px; color: #888; margin-bottom: 15px;">
-            Udarbejdet og udviklet af Tommi Hallum © 2026
-        </div>
         <div style="font-size: 13px; color: #ccc; margin-top: 10px;">
             Gemini er AI og kan begå fejl, også om personer.<br>
             <a href="https://support.google.com/gemini/answer/13594961" target="_blank" style="color: #4F46E5; text-decoration: none;">Dit privatliv og Gemini</a>
@@ -238,7 +240,7 @@ if uploaded:
         with r3: st.subheader("✨ 3. Historie & Stemning"); st.write(st.session_state['s3'])
         with r4: st.subheader("✨ Professionelle Tips"); st.success(st.session_state['s4'])
 
-# 7. GRAFISK FOOTER (Trin 1 Layout)
+# 7. GRAFISK FOOTER
 st.markdown("""
     <div style="text-align:center; padding:40px 20px; color:#888; font-size:13px; margin-top:50px; border-top:1px solid #333;">
         <div style="font-weight:bold; color:#555; margin-bottom:5px;">AI DREVET FOTO ANALYSE © 2026</div>
