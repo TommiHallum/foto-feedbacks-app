@@ -9,13 +9,12 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - FORBEDRET OG ROBUST LAYOUT
+# 2. CSS - DESIGN OG LÆSBARHED
 st.markdown("""
     <style>
-    /* Global baggrund */
     .stApp { background-color: #0e1117; color: #ffffff; }
     
-    /* Upload felt: Tvinger lys baggrund og fjerner overlap */
+    /* Upload felt: Lys boks, mørk tekst */
     [data-testid="stFileUploader"] {
         background-color: #f0f2f6 !important;
         border: 2px dashed #4F46E5 !important;
@@ -23,33 +22,31 @@ st.markdown("""
         padding: 20px !important;
     }
 
-    /* Skjul alt standard-tekst i upload-feltet for at undgå rod */
+    /* Skjul Streamlits standard labels for at undgå overlap */
     [data-testid="stFileUploader"] label, 
     [data-testid="stFileUploader"] small,
-    [data-testid="stFileUploader"] p,
-    [data-testid="stFileUploader"] span:not([data-testid="stMarkdownContainer"]) {
+    [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
     }
 
-    /* Indsæt vores egne instruktioner med CSS (Sikker mod Shadow DOM) */
+    /* Indsæt egen tekst i sort */
     [data-testid="stFileUploader"] section::before {
         content: "UPLOAD BILLEDE HER";
         display: block;
         color: #000000 !important;
         font-weight: bold;
-        font-size: 16px;
         margin-bottom: 5px;
         text-align: center;
     }
     [data-testid="stFileUploader"] section::after {
         content: "Max 20MB per fil • JPG, PNG";
         display: block;
-        color: #444444 !important;
+        color: #333333 !important;
         font-size: 13px;
         text-align: center;
     }
 
-    /* Knap-styling (Analyse & Download) */
+    /* Store lilla knapper */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
@@ -58,29 +55,17 @@ st.markdown("""
         height: 3.5em !important;
         width: 100% !important;
         border: none !important;
-        transition: 0.3s;
     }
     
-    div.stButton > button:hover {
-        background-color: #4338ca !important;
-        border: none !important;
-    }
-    
-    /* Deaktiveret knap */
     div.stButton > button:disabled {
         background-color: #262730 !important;
         color: #555555 !important;
-        cursor: not-allowed;
-    }
-
-    /* Status beskeder (Advarsler/Fejl) under knapperne */
-    .status-box {
-        margin-top: 15px;
+        border: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. FUNKTIONER (EXIF & PDF)
+# 3. FUNKTIONER
 def get_exif(image):
     exif = {}
     try:
@@ -131,17 +116,16 @@ with st.sidebar:
     st.divider()
     st.write("### Om appen")
     st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik og æstetik.")
+    st.markdown('**Mangler du en nøgle?**')
+    st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
 
-# Layout: Upload og knapper på én linje
+# Knapperække
 col_u, col_a, col_p = st.columns([2, 1, 1])
 
 with col_u:
     uploaded = st.file_uploader("", type=["jpg", "png"])
-
 with col_a:
-    # use_container_width sikrer at de følger kolonnens bredde
     analyze_btn = st.button("🚀 Analyser", use_container_width=True)
-
 with col_p:
     if 's1' in st.session_state:
         pdf_file = create_pdf(st.session_state['img'], st.session_state['exif'], 
@@ -151,7 +135,7 @@ with col_p:
     else:
         st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
-# Container til fejl/status placeret direkte under knapperne
+# Container til status/fejlbeskeder placeret under knapperne
 status_placeholder = st.container()
 
 # 5. LOGIK
@@ -159,7 +143,6 @@ if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
     
-    # Vis billede og EXIF
     c1, c2 = st.columns([2, 1])
     with c1: st.image(img, use_container_width=True)
     with c2: 
@@ -170,7 +153,7 @@ if uploaded:
     if analyze_btn:
         if not api_key:
             with status_placeholder:
-                st.warning("⚠️ Indtast API-nøgle i menuen til venstre.")
+                st.warning("⚠️ Du skal indtaste en Gemini API-nøgle i menuen til venstre for at starte analysen.")
         else:
             with st.spinner("AI analyserer..."):
                 try:
@@ -193,39 +176,4 @@ if uploaded:
                         st.session_state['s1'] = parts[1].strip()
                         st.session_state['s2'] = parts[2].strip()
                         st.session_state['s3'] = parts[3].strip()
-                        st.session_state['s4'] = parts[4].strip()
-                        st.session_state['img'], st.session_state['exif'] = img, exif_data
-                        st.rerun()
-                    else:
-                        with status_placeholder:
-                            st.error("Kunne ikke læse AI-svaret korrekt. Prøv venligst igen.")
-                except Exception as e:
-                    with status_placeholder:
-                        st.error(f"Der opstod en fejl: {e}")
-
-    # Vis resultaterne i kasser
-    if 's1' in st.session_state:
-        st.divider()
-        r1, r2 = st.columns(2)
-        with r1: 
-            st.subheader("1. Komposition")
-            st.write(st.session_state['s1'])
-        with r2: 
-            st.subheader("2. Lys & Teknik")
-            st.write(st.session_state['s2'])
-        
-        st.divider()
-        r3, r4 = st.columns(2)
-        with r3: 
-            st.subheader("3. Historie & Stemning")
-            st.write(st.session_state['s3'])
-        with r4: 
-            st.subheader("Professionelle Tips")
-            st.success(st.session_state['s4'])
-
-# Footer med korrekt lukket div
-st.markdown("""
-    <div style="text-align:center; padding:40px; color:#666; font-size:12px;">
-        FOTO FEEDBACK BY TOMMI HALLUM &copy; 2026
-    </div>
-""", unsafe_allow_html=True)
+                        st.session_state['s4'] =
