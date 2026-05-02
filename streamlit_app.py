@@ -29,7 +29,7 @@ st.markdown("""
         display: none !important;
     }
 
-    /* Indsæt egen tekst i sort */
+    /* Indsæt egen tekst i sort via CSS */
     [data-testid="stFileUploader"] section::before {
         content: "UPLOAD BILLEDE HER";
         display: block;
@@ -116,6 +116,8 @@ with st.sidebar:
     st.divider()
     st.write("### Om appen")
     st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik og æstetik.")
+    st.markdown('<div style="font-size: 13px; color: #ccc;">Gemini er AI og kan begå fejl, også om personer. <a href="https://support.google.com/gemini/answer/13594961" target="_blank" style="color: #4F46E5;">Dit privatliv og Gemini</a></div>', unsafe_allow_html=True)
+    st.divider()
     st.markdown('**Mangler du en nøgle?**')
     st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
 
@@ -135,7 +137,7 @@ with col_p:
     else:
         st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
-# Container til status/fejlbeskeder placeret under knapperne
+# Status container under knapperne
 status_placeholder = st.container()
 
 # 5. LOGIK
@@ -153,7 +155,7 @@ if uploaded:
     if analyze_btn:
         if not api_key:
             with status_placeholder:
-                st.warning("⚠️ Du skal indtaste en Gemini API-nøgle i menuen til venstre for at starte analysen.")
+                st.warning("⚠️ Indtast API-nøgle i menuen til venstre.")
         else:
             with st.spinner("AI analyserer..."):
                 try:
@@ -176,4 +178,25 @@ if uploaded:
                         st.session_state['s1'] = parts[1].strip()
                         st.session_state['s2'] = parts[2].strip()
                         st.session_state['s3'] = parts[3].strip()
-                        st.session_state['s4'] =
+                        st.session_state['s4'] = parts[4].strip()
+                        st.session_state['img'] = img
+                        st.session_state['exif'] = exif_data
+                        st.rerun()
+                    else:
+                        with status_placeholder:
+                            st.error("AI'en svarede i et forkert format. Prøv venligst igen.")
+                except Exception as e:
+                    with status_placeholder:
+                        st.error(f"Der opstod en fejl: {e}")
+
+    # Resultatvisning
+    if 's1' in st.session_state:
+        st.divider()
+        r1, r2 = st.columns(2)
+        with r1: st.subheader("1. Komposition"); st.write(st.session_state['s1'])
+        with r2: st.subheader("2. Lys & Teknik"); st.write(st.session_state['s2'])
+        r3, r4 = st.columns(2)
+        with r3: st.subheader("3. Historie & Stemning"); st.write(st.session_state['s3'])
+        with r4: st.subheader("Professionelle Tips"); st.success(st.session_state['s4'])
+
+st.markdown('<div style="text-align:center; padding:20px; color:#888; font-size:12px;">FOTO FEEDBACK BY TOMMI HALLUM © 2026</div>', unsafe_allow_html=True)
