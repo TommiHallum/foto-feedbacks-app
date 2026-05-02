@@ -77,25 +77,52 @@ def get_exif(image):
 def create_pdf(img, exif, s1, s2, s3, s4):
     pdf = FPDF()
     pdf.add_page()
+    
+    # Titel
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(190, 10, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
+    pdf.ln(5)
+    
+    # Gem billede midlertidigt til PDF
     img.convert("RGB").save("temp_p.jpg", "JPEG")
-    pdf.image("temp_p.jpg", x=10, y=30, w=90)
-    pdf.set_xy(110, 30)
+    
+    # Placer billede (skaleret ned til w=80)
+    pdf.image("temp_p.jpg", x=10, y=30, w=80)
+    
+    # Placer EXIF data til højre for billedet (x=100)
+    pdf.set_xy(100, 30)
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(90, 8, "Tekniske Data:", ln=True)
+    pdf.cell(90, 8, "Tekniske Data (EXIF):", ln=True)
     pdf.set_font("Arial", '', 10)
-    for k, v in exif.items():
-        pdf.set_x(110)
-        pdf.cell(90, 6, f"{k}: {v}", ln=True)
-    pdf.set_y(120)
-    sections = [("1. Komposition", s1), ("2. Lys & Teknik", s2), ("3. Historie & Stemning", s3), ("Professionelle Tips", s4)]
+    if exif:
+        for k, v in exif.items():
+            pdf.set_x(100)
+            pdf.cell(90, 6, f"{k}: {v}", ln=True)
+    else:
+        pdf.set_x(100)
+        pdf.cell(90, 6, "Ingen EXIF data fundet", ln=True)
+
+    # Bestem y-position for analysen (under billedet eller EXIF, hvad end der er lavest)
+    # Vi sætter den fast til y=100 for at være sikker på at være under billedet
+    pdf.set_y(100)
+    pdf.ln(10)
+    
+    sections = [
+        ("1. Komposition", s1), 
+        ("2. Lys & Teknik", s2), 
+        ("3. Historie & Stemning", s3), 
+        ("Professionelle Tips", s4)
+    ]
+    
     for title, content in sections:
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(190, 8, title, ln=True)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.set_fill_color(240, 242, 246)
+        pdf.cell(190, 8, title, ln=True, fill=True)
         pdf.set_font("Arial", '', 10)
-        pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'))
-        pdf.ln(2)
+        # Multi_cell sikrer linjeskift. Vi bruger 'latin-1' replace for at undgå fejl med specielle tegn
+        pdf.multi_cell(190, 6, content.encode('latin-1', 'replace').decode('latin-1'))
+        pdf.ln(4)
+        
     os.remove("temp_p.jpg")
     return pdf.output(dest='S').encode('latin-1')
 
@@ -107,7 +134,7 @@ with st.sidebar:
     api_key = st.text_input("Gemini API Nøgle:", type="password")
     st.divider()
     st.markdown('**Mangler du en nøgle?**')
-    st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
+    st.markdown('[Få din Gemini API-nøgle her](https://a1studio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
     st.write("### Om appen")
     st.info("Professionel fotoanalyse drevet af AI.")
