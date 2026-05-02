@@ -9,13 +9,11 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - ROBUST OG RENT LAYOUT
+# 2. CSS - ROBUST DESIGN
 st.markdown("""
     <style>
-    /* Global baggrund og tekstfarve */
     .stApp { background-color: #0e1117; color: #ffffff; }
     
-    /* Upload-felt styling */
     [data-testid="stFileUploader"] {
         background-color: #f0f2f6 !important;
         border: 2px dashed #4F46E5 !important;
@@ -23,14 +21,12 @@ st.markdown("""
         padding: 20px !important;
     }
     
-    /* Fjern standard Streamlit-tekst i uploader for at undgå rod */
     [data-testid="stFileUploader"] label, 
     [data-testid="stFileUploader"] small,
     [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
     }
     
-    /* Tilføj egen tekst i upload-feltet */
     [data-testid="stFileUploader"] section::before {
         content: "UPLOAD BILLEDE HER";
         display: block;
@@ -47,7 +43,6 @@ st.markdown("""
         text-align: center;
     }
 
-    /* Knap styling (Lilla tema) */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
@@ -56,22 +51,12 @@ st.markdown("""
         height: 3.5em !important;
         width: 100% !important;
         border: none !important;
-        transition: 0.3s ease;
     }
     
-    div.stButton > button:hover {
-        background-color: #4338ca !important;
-    }
-
     div.stButton > button:disabled {
         background-color: #262730 !important;
         color: #555555 !important;
         border: none !important;
-    }
-
-    /* Status/Loading beskeder */
-    .status-container {
-        margin-top: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -94,10 +79,8 @@ def create_pdf(img, exif, s1, s2, s3, s4):
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(190, 10, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
-    
     img.convert("RGB").save("temp_p.jpg", "JPEG")
     pdf.image("temp_p.jpg", x=10, y=30, w=90)
-    
     pdf.set_xy(110, 30)
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(90, 8, "Tekniske Data:", ln=True)
@@ -105,7 +88,6 @@ def create_pdf(img, exif, s1, s2, s3, s4):
     for k, v in exif.items():
         pdf.set_x(110)
         pdf.cell(90, 6, f"{k}: {v}", ln=True)
-    
     pdf.set_y(120)
     sections = [("1. Komposition", s1), ("2. Lys & Teknik", s2), ("3. Historie & Stemning", s3), ("Professionelle Tips", s4)]
     for title, content in sections:
@@ -114,38 +96,30 @@ def create_pdf(img, exif, s1, s2, s3, s4):
         pdf.set_font("Arial", '', 10)
         pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'))
         pdf.ln(2)
-        
     os.remove("temp_p.jpg")
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. SIDEBAR & LAYOUT
+# 4. SIDEBAR
 st.title("FOTO FEEDBACK")
 
 with st.sidebar:
     st.title("Indstillinger")
     api_key = st.text_input("Gemini API Nøgle:", type="password")
     st.divider()
-    
-    # Afsnit 1: API Nøgle hjælp
     st.markdown('**Mangler du en nøgle?**')
     st.markdown('[Få din Gemini API-nøgle her](https://aistudio.google.com/app/apikey)', unsafe_allow_html=True)
     st.divider()
-    
-    # Afsnit 2: Om appen og Privatliv
     st.write("### Om appen")
-    st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på teknik og æstetik.")
+    st.info("Professionel fotoanalyse drevet af AI.")
     st.markdown("""
-        <div style="font-size: 13px; color: #ccc; line-height: 1.4;">
+        <div style="font-size: 13px; color: #ccc;">
             Gemini er AI og kan begå fejl, også om personer.<br>
-            <a href="https://support.google.com/gemini/answer/13594961" target="_blank" style="color: #4F46E5; text-decoration: none;">
-                Dit privatliv og Gemini
-            </a>
+            <a href="https://support.google.com/gemini/answer/13594961" target="_blank" style="color: #4F46E5;">Dit privatliv og Gemini</a>
         </div>
     """, unsafe_allow_html=True)
 
-# Knapperække
+# Layout Knapper
 col_u, col_a, col_p = st.columns([2, 1, 1])
-
 with col_u:
     uploaded = st.file_uploader("", type=["jpg", "png"])
 with col_a:
@@ -159,10 +133,9 @@ with col_p:
     else:
         st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
-# Fast plads til Status og Fejl (Under knapperne)
 status_placeholder = st.container()
 
-# 5. HOVEDLOGIK
+# 5. LOGIK
 if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
@@ -184,38 +157,32 @@ if uploaded:
                     try:
                         genai.configure(api_key=api_key)
                         model = genai.GenerativeModel('gemini-flash-latest')
-                        
-                        prompt = """Analyser dette billede professionelt. 
-                        Du SKAL starte hver sektion med præcis disse overskrifter:
-                        SEKTION1:
-                        SEKTION2:
-                        SEKTION3:
-                        SEKTION4:
-                        Giv dybdegående feedback på dansk."""
-                        
+                        prompt = "Analyser dette billede professionelt. Du SKAL starte hver sektion med præcis disse overskrifter: SEKTION1: SEKTION2: SEKTION3: SEKTION4: Giv dybdegående feedback på dansk."
                         res = model.generate_content([prompt, img])
-                        full_text = res.text
-                        
-                        # Robust splitting af tekst
-                        parts = re.split(r'SEKTION\d:', full_text)
+                        parts = re.split(r'SEKTION\d:', res.text)
                         
                         if len(parts) >= 5:
                             st.session_state['s1'] = parts[1].strip()
                             st.session_state['s2'] = parts[2].strip()
                             st.session_state['s3'] = parts[3].strip()
                             st.session_state['s4'] = parts[4].strip()
-                            st.session_state['img'] = img
-                            st.session_state['exif'] = exif_data
+                            st.session_state['img'], st.session_state['exif'] = img, exif_data
                             status.update(label="Analyse færdig!", state="complete", expanded=False)
                             st.rerun()
                         else:
                             status.update(label="Formatfejl", state="error")
-                            st.error("AI'en returnerede et uventet format. Prøv igen.")
+                            st.error("AI'en svarede i et forkert format.")
                     except Exception as e:
-                        status.update(label="Fejl opstået", state="error")
-                        st.error(f"Der skete en fejl: {e}")
+                        status.update(label="Fejl", state="error")
+                        st.error(f"Fejl: {e}")
 
-    # Visning af resultater
     if 's1' in st.session_state:
         st.divider()
-        r1, r2 = st.columns(2
+        r1, r2 = st.columns(2)
+        with r1: st.subheader("1. Komposition"); st.write(st.session_state['s1'])
+        with r2: st.subheader("2. Lys & Teknik"); st.write(st.session_state['s2'])
+        r3, r4 = st.columns(2)
+        with r3: st.subheader("3. Historie & Stemning"); st.write(st.session_state['s3'])
+        with r4: st.subheader("Professionelle Tips"); st.success(st.session_state['s4'])
+
+st.markdown('<div style="text-align:center; padding:20px; color:#888; font-size:12px;">FOTO FEEDBACK BY TOMMI HALLUM © 2026</div>', unsafe_allow_html=True)
