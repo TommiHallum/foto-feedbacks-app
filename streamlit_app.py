@@ -31,6 +31,7 @@ if api_key:
                     1. Komposition og beskæring.
                     2. Lys, farver og teknik.
                     3. Den visuelle historie (hvad fortæller billedet?).
+                    4. List også EXIF data fra billedet i en lysgrå boks. Boksen skal være før feedback med data på hver linje.
                     
                     Vær konstruktiv, venlig og giv ét konkret råd til forbedring.
                     Svar på dansk i et letforståeligt sprog.
