@@ -8,7 +8,7 @@ import os
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - TOTAL RENSNING OG PDF KNAP STYLING
+# 2. CSS - DESIGN OG LÆSBARHED
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
@@ -81,7 +81,6 @@ def create_pdf(img, exif, s1, s2, s3, s4):
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(190, 10, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
     
-    # Billede (venstre) og EXIF (højre) i PDF
     img.convert("RGB").save("temp_p.jpg", "JPEG")
     pdf.image("temp_p.jpg", x=10, y=30, w=90)
     
@@ -93,7 +92,6 @@ def create_pdf(img, exif, s1, s2, s3, s4):
         pdf.set_x(110)
         pdf.cell(90, 6, f"{k}: {v}", ln=True)
     
-    # Feedback sektioner
     pdf.set_y(120)
     sections = [("1. Komposition", s1), ("2. Lys", s2), ("3. Historie", s3), ("Tips", s4)]
     for title, content in sections:
@@ -113,9 +111,10 @@ with st.sidebar:
     st.title("Indstillinger")
     api_key = st.text_input("Gemini API Nøgle:", type="password")
     st.divider()
-    st.info("Om appen: Professionel fotoanalyse drevet af AI. Upload et billede og få feedback på komposition, lys og historie.")
+    st.write("### Om appen")
+    st.info("Professionel fotoanalyse drevet af AI. Upload et billede og få øjeblikkelig feedback på komposition, lyssætning og historiefortælling.")
 
-# De tre knapper på stribe
+# Knapperække
 col_u, col_a, col_p = st.columns([2, 1, 1])
 
 with col_u:
@@ -133,7 +132,7 @@ with col_p:
     else:
         st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
-# 5. LOGIK NÅR BILLEDE ER UPLOADET
+# 5. LOGIK
 if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
@@ -145,22 +144,25 @@ if uploaded:
         if exif_data: st.table(exif_data)
         else: st.info("Ingen EXIF data fundet")
 
-    if analyze_btn and api_key:
-        with st.spinner("AI analyserer..."):
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-flash-latest')
-            res = model.generate_content(["Analyser billede i 4 sektioner: [S1] Komp, [S2] Lys, [S3] Hist, [S4] Tips", img])
-            txt = res.text
-            try:
-                st.session_state['s1'] = txt.split("[S2]")[0].replace("[S1]", "").strip()
-                st.session_state['s2'] = txt.split("[S2]")[1].split("[S3]")[0].strip()
-                st.session_state['s3'] = txt.split("[S3]")[1].split("[S4]")[0].strip()
-                st.session_state['s4'] = txt.split("[S4]")[1].strip()
-                st.session_state['img'], st.session_state['exif'] = img, exif_data
-                st.rerun()
-            except: st.error("Fejl i AI-formatet. Prøv igen.")
+    if analyze_btn:
+        if not api_key:
+            st.warning("⚠️ Du skal indtaste en Gemini API-nøgle i menuen til venstre for at starte analysen.")
+        else:
+            with st.spinner("AI analyserer billedet..."):
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-flash-latest')
+                res = model.generate_content(["Analyser billede i 4 sektioner: [S1] Komp, [S2] Lys, [S3] Hist, [S4] Tips", img])
+                txt = res.text
+                try:
+                    st.session_state['s1'] = txt.split("[S2]")[0].replace("[S1]", "").strip()
+                    st.session_state['s2'] = txt.split("[S2]")[1].split("[S3]")[0].strip()
+                    st.session_state['s3'] = txt.split("[S3]")[1].split("[S4]")[0].strip()
+                    st.session_state['s4'] = txt.split("[S4]")[1].strip()
+                    st.session_state['img'], st.session_state['exif'] = img, exif_data
+                    st.rerun()
+                except: st.error("Fejl i AI-formatet. Prøv igen.")
 
-    # Vis resultaterne
+    # Resultatvisning
     if 's1' in st.session_state:
         st.divider()
         r1, r2 = st.columns(2)
