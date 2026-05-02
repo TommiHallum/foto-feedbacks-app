@@ -43,7 +43,6 @@ st.markdown("""
 # 2. SIDEBAR (API NØGLE & OM APPEN)
 with st.sidebar:
     st.title("Indstillinger")
-    # Bevarer dit ønske om selv at kunne paste API-nøglen
     api_key = st.text_input("Indsæt din Gemini API-nøgle her:", type="password")
     
     st.markdown("---")
@@ -76,9 +75,9 @@ with col2:
         else:
             if st.button("🚀 Start AI Analyse", use_container_width=True):
                 try:
-                    # BRUGER GEMINI-FLASH-LATEST SOM DU BAD OM
+                    # Bruger den korrekte model: gemini-flash-latest
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-flash-latest')[cite: 1]
+                    model = genai.GenerativeModel('gemini-flash-latest')
                     
                     with st.spinner('Analyserer...'):
                         prompt = "Du er en professionel fotograf. Analyser komposition, lys og teknik i dette billede."
@@ -91,9 +90,9 @@ with col2:
     else:
         st.info("Vent på upload...")
 
-# 4. FOOTER (OPDATERET DESIGN)
-st.markdown(f"""
+# 4. FOOTER
+st.markdown("""
     <div class="custom-footer">
         FOTO FEEDBACK BY TOMMI HALLUM © 2026
     </div>
-    """, unsafe_allow_html=True)[cite: 1]
+    """, unsafe_allow_html=True)
