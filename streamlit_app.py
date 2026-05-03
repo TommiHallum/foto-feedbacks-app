@@ -9,12 +9,12 @@ import re
 # 1. SIDE KONFIGURATION
 st.set_page_config(page_title="Foto Feedback", layout="wide")
 
-# 2. CSS - KOMPLETTE RETTELSER (SIDEBAR, FLUGTNING OG KOMPAKTHED)
+# 2. CSS - SIDEBAR, FLUGTNING OG KOMPAKTHED
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #ffffff; }
     
-    /* SIDEBAR: Reducer luft og margener i venstre side */
+    /* SIDEBAR: Maksimalt komprimeret */
     [data-testid="stSidebar"] { padding-top: 0.5rem !important; }
     [data-testid="stSidebar"] h1 { font-size: 1.4rem !important; margin-bottom: 0.5rem !important; }
     [data-testid="stSidebar"] h4 { margin: 0.2rem 0 0.1rem 0 !important; padding: 0 !important; }
@@ -22,7 +22,7 @@ st.markdown("""
     [data-testid="stSidebar"] .stMarkdown p { margin-bottom: 0.1rem !important; line-height: 1.2 !important; }
     [data-testid="stSidebar"] hr { margin: 5px 0 !important; }
 
-    /* HOVEDLAYOUT: Tvinger upload og knapper til at flugte i bunden */
+    /* HOVEDLAYOUT: Flugtning i bunden */
     [data-testid="column"] {
         display: flex;
         flex-direction: column;
@@ -41,7 +41,7 @@ st.markdown("""
     [data-testid="stFileUploader"] section::before { content: "UPLOAD BILLEDE"; display: block; color: #4F46E5 !important; font-weight: bold; text-align: center; padding-top: 5px; }
     [data-testid="stFileUploader"] section::after { content: "JPG, PNG (Max 20MB)"; display: block; color: #666666 !important; font-size: 10px; text-align: center; padding-bottom: 5px; }
 
-    /* Knap styling - Præcis højde-match til upload felt */
+    /* Knap styling */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #4F46E5 !important;
         color: white !important;
@@ -58,7 +58,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. HJÆLPEFUNKTIONER (PDF & EXIF)
+# 3. HJÆLPEFUNKTIONER
 class PDF(FPDF):
     def footer(self):
         self.set_y(-25)
@@ -68,6 +68,14 @@ class PDF(FPDF):
         self.cell(0, 5, "✨ ✨ ✨", ln=True, align='C')
         self.set_font("Arial", '', 8); self.set_text_color(100, 100, 100)
         self.cell(0, 5, "hallum.dk - dinfotomand.dk - fotoliv.dk", ln=True, align='C')
+
+def clean_text(text):
+    """Fjerner tegn der ødelægger PDF-genereringen i latin-1"""
+    if not text: return ""
+    # Erstat specielle tankestreger og citationstegn med standardtegn
+    text = text.replace('\u2013', '-').replace('\u2014', '-').replace('\u2019', "'").replace('\u201d', '"').replace('\u201c', '"')
+    # Konverter til latin-1 og ignorer tegn der ikke findes
+    return text.encode('latin-1', 'ignore').decode('latin-1')
 
 def get_exif(image):
     exif = {}
@@ -81,9 +89,6 @@ def get_exif(image):
                     elif name == 'FNumber': exif['Blænde'] = f"f/{val}"
                     elif name == 'FocalLength': exif['Brændvidde'] = f"{val}mm"
                     elif name == 'ISOSpeedRatings': exif['ISO'] = val
-                    elif name == 'DateTimeOriginal': exif['Dato/Tid'] = val
-                    elif name == 'Make': exif['Mærke'] = val
-                    elif name == 'Model': exif['Kamera'] = val
                     elif name == 'LensModel': exif['Objektiv'] = val
                     else: exif[name] = str(val)
                 if name == "GPSInfo":
@@ -98,27 +103,36 @@ def create_pdf(img, exif, intro, s1, s2, s3, s4):
     pdf = PDF()
     pdf.add_page()
     blue_info_bg, gray_section_bg, brand_blue = (231, 243, 255), (240, 242, 246), (79, 70, 229)
+    
     pdf.set_font("Arial", 'B', 16); pdf.set_text_color(*brand_blue); pdf.cell(190, 15, "FOTO FEEDBACK RAPPORT", ln=True, align='C')
+    
     img.convert("RGB").save("temp_report_img.jpg", "JPEG")
-    pdf.image("temp_report_img.jpg", x=10, y=35, w=70) # Mindre billede for printvenlighed
+    pdf.image("temp_report_img.jpg", x=10, y=35, w=70)
+    
     pdf.set_xy(90, 35); pdf.set_font("Arial", 'B', 11); pdf.set_text_color(0, 0, 0); pdf.set_fill_color(249, 250, 251)
     pdf.cell(110, 8, " Tekniske Data (EXIF):", ln=True, fill=True, border=1)
     pdf.set_font("Arial", '', 9)
     if exif:
-        for k, v in exif.items(): pdf.set_x(90); pdf.cell(110, 6, f" {k}: {v}", ln=True, border='LR')
-    else: pdf.set_x(90); pdf.cell(110, 6, " Ingen EXIF data fundet", ln=True, border='LR')
+        for k, v in exif.items(): 
+            pdf.set_x(90); pdf.cell(110, 6, clean_text(f" {k}: {v}"), ln=True, border='LR')
+    else: 
+        pdf.set_x(90); pdf.cell(110, 6, " Ingen EXIF data fundet", ln=True, border='LR')
     pdf.set_x(90); pdf.cell(110, 1, "", ln=True, border='B')
+    
     pdf.ln(10)
     pdf.set_font("Arial", 'B', 12); pdf.set_fill_color(*blue_info_bg); pdf.cell(190, 8, " Samlet Vurdering", ln=True, fill=True, border=1)
-    pdf.set_font("Arial", 'I', 10); pdf.multi_cell(190, 6, intro.encode('latin-1', 'replace').decode('latin-1'), border=1)
+    pdf.set_font("Arial", 'I', 10); pdf.multi_cell(190, 6, clean_text(intro), border=1)
+    
     for title, content in [("1. Komposition", s1), ("2. Lys & Teknik", s2), ("3. Historie & Stemning", s3), ("Professionelle Tips", s4)]:
         if pdf.get_y() > 220: pdf.add_page()
-        pdf.ln(5); pdf.set_font("Arial", 'B', 11); pdf.set_fill_color(*gray_section_bg); pdf.cell(190, 8, f" {title}", ln=True, fill=True, border=1)
-        pdf.set_font("Arial", '', 10); pdf.multi_cell(190, 5, content.encode('latin-1', 'replace').decode('latin-1'), border=1)
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 11); pdf.set_fill_color(*gray_section_bg); pdf.cell(190, 8, clean_text(f" {title}"), ln=True, fill=True, border=1)
+        pdf.set_font("Arial", '', 10); pdf.multi_cell(190, 5, clean_text(content), border=1)
+    
     if os.path.exists("temp_report_img.jpg"): os.remove("temp_report_img.jpg")
-    return pdf.output(dest='S').encode('latin-1')
+    return pdf.output(dest='S') # Returnerer bytes direkte
 
-# 4. SIDEBAR (RETET MED MINIMAL AFSTAND)
+# 4. SIDEBAR
 st.title("FOTO FEEDBACK")
 with st.sidebar:
     st.markdown("#### Indstillinger")
@@ -143,10 +157,9 @@ with col_p:
         st.download_button("📥 Hent PDF", data=pdf_data, file_name="foto-feedback.pdf", mime="application/pdf", use_container_width=True)
     else: st.button("📥 Hent PDF", disabled=True, use_container_width=True)
 
-# Status-felt lige under knapperne
 status_placeholder = st.container()
 
-# 6. LOGIK & VISNING
+# 6. LOGIK
 if uploaded:
     img = Image.open(uploaded)
     exif_data = get_exif(img)
@@ -165,7 +178,7 @@ if uploaded:
                 with st.status("AI analyserer billedet...", expanded=True) as status:
                     try:
                         genai.configure(api_key=api_key)
-                        model = genai.GenerativeModel('gemini-flash-latest')
+                        model = genai.GenerativeModel('gemini-1.5-flash')
                         res = model.generate_content(["Analyser dette billede som en professionel fotograf. Start med en generel indledning. Brug overskrifter: INDLEDNING:, SEKTION1:, SEKTION2:, SEKTION3:, SEKTION4:. Giv dybdegående feedback på dansk.", img])
                         parts = re.split(r'(INDLEDNING:|SEKTION1:|SEKTION2:|SEKTION3:|SEKTION4:)', res.text)
                         st.session_state.update({
